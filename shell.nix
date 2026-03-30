@@ -3,5 +3,7 @@
 pkgs.mkShell {
   buildInputs = [
     pkgs.nodejs
+    pkgs.pnpm
+    pkgs.tsx
   ];
 }

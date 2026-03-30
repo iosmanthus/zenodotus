@@ -1,0 +1,16 @@
+{
+  "name": "@zenodotus/api-spec",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./openapi.yaml": "./openapi.yaml",
+    "./schema": "./generated/schema.d.ts"
+  },
+  "scripts": {
+    "generate": "openapi-typescript openapi.yaml -o generated/schema.d.ts"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.0.0"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "zenodotus",
+  "private": true,
+  "scripts": {
+    "generate": "pnpm --filter @zenodotus/api-spec generate",
+    "dev:server": "pnpm --filter @zenodotus/server dev",
+    "dev:extension": "pnpm --filter @zenodotus/extension dev",
+    "build:extension": "pnpm --filter @zenodotus/extension build"
+  }
+}

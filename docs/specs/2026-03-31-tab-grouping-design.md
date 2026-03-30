@@ -2,7 +2,7 @@
 
 ## Overview
 
-A Chrome extension that uses AI (Sonnet 4.6) to intelligently group and sort browser tabs. The extension communicates with a local HTTP server that abstracts the AI backend (Claude Code SDK, Codex, or others).
+A Chrome extension that uses LLM to intelligently group and sort browser tabs. The extension communicates with a local HTTP server that abstracts the AI backend (Claude Code SDK, Codex, or others).
 
 ## Architecture
 

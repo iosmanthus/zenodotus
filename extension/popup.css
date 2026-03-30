@@ -1,0 +1,111 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  width: 300px;
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+  padding: 12px;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#status-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ccc;
+}
+
+#status-dot.connected {
+  background: #22c55e;
+}
+
+#status-dot.disconnected {
+  background: #ef4444;
+}
+
+#status-text {
+  flex: 1;
+  color: #666;
+}
+
+#check-btn {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 14px;
+}
+
+#organize-btn {
+  padding: 8px 12px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+#organize-btn:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+}
+
+#organize-btn.loading {
+  opacity: 0.7;
+}
+
+label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #333;
+}
+
+details {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+summary {
+  cursor: pointer;
+  color: #666;
+}
+
+#prompt-input {
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+  resize: vertical;
+}
+
+#save-prompt-btn {
+  margin-top: 6px;
+  padding: 4px 10px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}

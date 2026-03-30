@@ -1,0 +1,11 @@
+{
+  "name": "zenodotus-server",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-code": "^1.0.0"
+  }
+}

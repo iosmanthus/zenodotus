@@ -63,7 +63,7 @@ export async function assignGroups(request: GroupRequest): Promise<GroupResponse
     prompt: fullPrompt,
     options: {
       maxTurns: 1,
-      allowedTools: ["mcp__zenodotus__assign_tab_groups"],
+      disallowedTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
       mcpServers: { zenodotus: mcpServer },
       persistSession: false,
     },

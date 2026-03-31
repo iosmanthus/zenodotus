@@ -193,17 +193,14 @@ export default defineBackground(() => {
     if (result) await applyGrouping(result);
   }
 
-  // Auto trigger: page load complete or tab removed from group
+  // Auto trigger with S2 debounce
   chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
+    // I1: read autoGroupEnabled from storage
     const { autoGroupEnabled } = await chrome.storage.local.get({
       autoGroupEnabled: false,
     });
     if (!autoGroupEnabled) return;
-
-    const isPageLoad = changeInfo.status === "complete";
-    const isUngrouped = changeInfo.groupId === chrome.tabGroups.TAB_GROUP_ID_NONE;
-
-    if (!isPageLoad && !isUngrouped) return;
+    if (changeInfo.status !== "complete") return;
     if (tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) return;
 
     pendingTabs.add(tab);

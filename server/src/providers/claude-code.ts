@@ -18,6 +18,29 @@ const SYSTEM_PROMPT = [
   "Use the assign_tab_groups tool to respond.",
 ].join("\n");
 
+const TOOL_NAME = "assign_tab_groups";
+const MCP_TOOL_NAME = "mcp__zenodotus__assign_tab_groups";
+
+const assignTool = tool(
+  TOOL_NAME,
+  "Assign browser tabs to groups based on their content and context.",
+  {
+    groups: z.array(
+      z.object({
+        groupId: z.number().optional().describe("ID of an existing group. Omit to create a new group."),
+        name: z.string().optional().describe("Name for the group. Required when creating a new group."),
+        tabIds: z.array(z.number()).describe("Tab IDs to assign to this group."),
+      }),
+    ),
+  },
+  async () => ({ content: [{ type: "text" as const, text: "done" }] }),
+);
+
+const mcpServer = createSdkMcpServer({
+  name: "zenodotus",
+  tools: [assignTool],
+});
+
 function buildUserPrompt(request: GroupRequest): string {
   const parts: string[] = [];
   if (request.prompt) {
@@ -31,55 +54,31 @@ function buildUserPrompt(request: GroupRequest): string {
 }
 
 export async function assignGroups(request: GroupRequest): Promise<GroupResponse | null> {
-  let captured: GroupResponse | null = null;
-
-  const assignTool = tool(
-    "assign_tab_groups",
-    "Assign browser tabs to groups based on their content and context.",
-    {
-      groups: z.array(
-        z.object({
-          groupId: z
-            .number()
-            .optional()
-            .describe("ID of an existing group. Omit to create a new group."),
-          name: z
-            .string()
-            .optional()
-            .describe("Name for the group. Required when creating a new group."),
-          tabIds: z.array(z.number()).describe("Tab IDs to assign to this group."),
-        }),
-      ),
-    },
-    async (args) => {
-      captured = { groups: args.groups };
-      return { content: [{ type: "text" as const, text: "Groups assigned." }] };
-    },
-  );
-
-  const mcpServer = createSdkMcpServer({
-    name: "zenodotus",
-    tools: [assignTool],
-  });
-
   const userPrompt = buildUserPrompt(request);
   const fullPrompt = [SYSTEM_PROMPT, userPrompt].join("\n\n");
 
   const abortController = new AbortController();
   const timeout = setTimeout(() => abortController.abort(), 30000);
 
+  let captured: GroupResponse | null = null;
+
   try {
-    for await (const _event of query({
+    for await (const event of query({
       prompt: fullPrompt,
       options: {
-        maxTurns: 1,
-        disallowedTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+        maxTurns: 5,
         mcpServers: { zenodotus: mcpServer },
         persistSession: false,
         abortController,
       },
     })) {
-      // drain events
+      if (event.type === "assistant" && event.message?.content) {
+        for (const block of event.message.content) {
+          if (block.type === "tool_use" && block.name === MCP_TOOL_NAME && !captured) {
+            captured = block.input as GroupResponse;
+          }
+        }
+      }
     }
   } finally {
     clearTimeout(timeout);

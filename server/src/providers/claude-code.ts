@@ -1,14 +1,9 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { spec } from "@zenodotus/api-spec";
 import type { components } from "@zenodotus/api-spec/schema";
-import { buildFullPrompt } from "./prompt";
+import { buildFullPrompt, outputSchema } from "./prompt";
 
 type GroupRequest = components["schemas"]["GroupRequest"];
 type GroupResponse = components["schemas"]["GroupResponse"];
-
-const outputSchema = (spec as Record<string, unknown>).components as {
-  schemas: Record<string, unknown>;
-};
 
 export async function assignGroups(request: GroupRequest): Promise<GroupResponse | null> {
   const fullPrompt = buildFullPrompt(request);
@@ -27,7 +22,7 @@ export async function assignGroups(request: GroupRequest): Promise<GroupResponse
         abortController,
         outputFormat: {
           type: "json_schema",
-          schema: outputSchema.schemas.GroupResponse as Record<string, unknown>,
+          schema: outputSchema,
         },
       },
     })) {

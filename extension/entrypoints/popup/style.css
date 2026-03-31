@@ -71,6 +71,12 @@ body {
   opacity: 0.7;
 }
 
+#error-msg {
+  color: #ef4444;
+  font-size: 12px;
+  min-height: 16px;
+}
+
 label {
   display: flex;
   align-items: center;

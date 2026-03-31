@@ -1,3 +1,5 @@
+import { checkHealth } from "@/utils/api";
+
 const statusDot = document.getElementById("status-dot")!;
 const statusText = document.getElementById("status-text")!;
 const checkBtn = document.getElementById("check-btn")!;
@@ -9,22 +11,17 @@ const promptInput = document.getElementById(
   "prompt-input",
 ) as HTMLTextAreaElement;
 const savePromptBtn = document.getElementById("save-prompt-btn")!;
+const errorMsg = document.getElementById("error-msg")!;
 
 let connected = false;
+let errorClearTimer: ReturnType<typeof setTimeout> | null = null;
 
+// I3: use checkHealth() from utils/api
 async function checkConnection(): Promise<void> {
   statusDot.className = "";
   statusText.textContent = "Checking...";
 
-  try {
-    const res = await fetch("http://localhost:18080/health", {
-      signal: AbortSignal.timeout(3000),
-    });
-    const data = await res.json();
-    connected = data.ok === true;
-  } catch {
-    connected = false;
-  }
+  connected = await checkHealth();
 
   if (connected) {
     statusDot.className = "connected";
@@ -37,18 +34,40 @@ async function checkConnection(): Promise<void> {
   }
 }
 
+// S8: show error in the error element, auto-clear after 5s
+function showError(message: string): void {
+  errorMsg.textContent = message;
+  if (errorClearTimer != null) {
+    clearTimeout(errorClearTimer);
+  }
+  errorClearTimer = setTimeout(() => {
+    errorMsg.textContent = "";
+    errorClearTimer = null;
+  }, 5000);
+}
+
 checkBtn.addEventListener("click", checkConnection);
 
 organizeBtn.addEventListener("click", async () => {
   organizeBtn.disabled = true;
   organizeBtn.classList.add("loading");
   organizeBtn.textContent = "Organizing...";
+  // S8: clear error before organizing
+  errorMsg.textContent = "";
 
-  chrome.runtime.sendMessage({ action: "organize" }, () => {
-    organizeBtn.disabled = false;
-    organizeBtn.classList.remove("loading");
-    organizeBtn.textContent = "Organize Tabs";
-  });
+  chrome.runtime.sendMessage(
+    { action: "organize" },
+    (response: { success: boolean; error?: string }) => {
+      organizeBtn.disabled = false;
+      organizeBtn.classList.remove("loading");
+      organizeBtn.textContent = "Organize Tabs";
+
+      // S8: check response.success and show error if failed
+      if (response && response.success === false && response.error) {
+        showError(response.error);
+      }
+    },
+  );
 });
 
 autoToggle.addEventListener("change", () => {

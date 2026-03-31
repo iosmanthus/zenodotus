@@ -1,18 +1,18 @@
 # Zenodotus
 
-Intelligent browser tab grouping powered by LLM.
+Intelligent browser tab grouping powered by your local coding agent (Claude Code / Codex).
 
 ## How It Works
 
-Zenodotus collects your open tabs (URL, title, meta description), sends them to a local server which calls an LLM, and applies the returned grouping to your browser. Groups are color-coded by name.
+Zenodotus collects your open tabs (URL, title, meta description), sends them to a local server which calls your coding agent, and applies the returned grouping to your browser. Groups are color-coded by name.
 
 ```
-Chrome Extension  -->  Local Server (:18080)  -->  Claude (via subscription)
+Chrome Extension  -->  Local Server (:18080)  -->  Claude Code or Codex (via subscription)
 ```
 
 ## Prerequisites
 
-- [Claude Code](https://claude.com/product/claude-code) CLI logged in (`claude login`)
+- [Claude Code](https://claude.com/product/claude-code) or [Codex](https://github.com/openai/codex) CLI installed and logged in
 - Chromium-based browser (Chrome, Brave, Edge, etc.)
 
 ## Setup
@@ -45,6 +45,12 @@ The server listens on `http://localhost:18080` by default. To use a different po
 PORT=9090 pnpm dev:server
 ```
 
+To use Codex as the default provider:
+
+```bash
+PROVIDER=codex pnpm dev:server
+```
+
 ### 2. Load the extension
 
 ```bash
@@ -58,25 +64,28 @@ Then in your browser:
 3. Click **Load unpacked**
 4. Select `extension/.output/chrome-mv3`
 
+Or download the latest release from [GitHub Releases](https://github.com/iosmanthus/zenodotus/releases).
+
 ## Usage
 
 Click the Zenodotus extension icon to open the popup.
 
 ### Organize Tabs
 
-Click **Organize Tabs** to group all open tabs across all windows. The LLM analyzes each tab and assigns it to a group. Existing groups are preserved and reused.
+Click **Organize Tabs** to group all open tabs across all windows. The agent analyzes each tab and assigns it to a group. Existing groups are preserved and reused.
 
 ### Auto-group
 
-Toggle **Auto-group new tabs** to automatically group new tabs when they finish loading. New tabs are batched (2s debounce, 10s max wait) to reduce LLM calls.
+Toggle **Auto-group new tabs** to automatically group new tabs when they finish loading. New tabs are batched (2s debounce, 10s max wait) to reduce agent calls.
 
 ### Settings
 
 Expand **Settings** to configure:
 
 - **Server URL** -- Backend address. Default: `http://localhost:18080`
-- **Model** -- LLM model name. Default: `sonnet` (Claude Sonnet 4.6). Other options: `opus`, `haiku`
+- **Provider** -- `claude-code` (default) or `codex`
+- **Model** -- Model name. Default: `sonnet` for Claude Code. Leave empty for Codex default.
 - **Enable thinking** -- Turn on extended thinking for more deliberate grouping. Off by default for speed.
-- **Custom Prompt** -- Additional instructions for the LLM. Example: `"Group by project, use Chinese names"`
+- **Custom Prompt** -- Additional instructions. Example: `"Group by project, use Chinese names"`
 
 Click **Save** to persist settings.

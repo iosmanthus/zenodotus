@@ -76,7 +76,7 @@ export default defineBackground(() => {
     for (const group of result.groups) {
       if (!group.tabIds?.length) continue;
 
-      const validTabIds: number[] = [];
+      const validTabIds = [];
       for (const tabId of group.tabIds) {
         try {
           await chrome.tabs.get(tabId);
@@ -85,12 +85,14 @@ export default defineBackground(() => {
           // tab no longer exists
         }
       }
-      if (validTabIds.length === 0) continue;
+      const [first, ...rest] = validTabIds;
+      if (first == null) continue;
+      const tabIds: [number, ...number[]] = [first, ...rest];
 
       if (group.groupId != null) {
         try {
           await chrome.tabs.group({
-            tabIds: validTabIds as [number, ...number[]],
+            tabIds,
             groupId: group.groupId,
           });
           if (group.name) {
@@ -100,18 +102,18 @@ export default defineBackground(() => {
           }
         } catch {
           if (group.name) {
-            await createNewGroup(group.name, validTabIds);
+            await createNewGroup(group.name, tabIds);
           }
         }
       } else if (group.name) {
-        await createNewGroup(group.name, validTabIds);
+        await createNewGroup(group.name, tabIds);
       }
     }
   }
 
-  async function createNewGroup(name: string, tabIds: number[]): Promise<void> {
+  async function createNewGroup(name: string, tabIds: [number, ...number[]]): Promise<void> {
     try {
-      const groupId = await chrome.tabs.group({ tabIds: tabIds as [number, ...number[]] });
+      const groupId = await chrome.tabs.group({ tabIds });
       await chrome.tabGroups.update(groupId, {
         title: name,
         color: colorForGroup(name),

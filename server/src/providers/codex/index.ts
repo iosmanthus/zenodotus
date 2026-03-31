@@ -4,7 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import type { components } from "@zenodotus/api-spec/schema";
-import { buildFullPrompt, openAIOutputSchema } from "./prompt";
+import { buildFullPrompt } from "../prompt";
+import { openAIOutputSchema } from "./schema";
 
 const execFileAsync = promisify(execFile);
 

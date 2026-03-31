@@ -1,40 +1,13 @@
+import { spec } from "@zenodotus/api-spec";
 import type { components } from "@zenodotus/api-spec/schema";
 
 type GroupRequest = components["schemas"]["GroupRequest"];
 
-// Unified output schema in OpenAI structured output format
-// Claude also accepts this format, so one schema for all providers
-// OpenAI requires: all keys in required, additionalProperties: false, optional via anyOf null
-export const openAIOutputSchema = {
-  type: "object",
-  properties: {
-    groups: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          groupId: {
-            anyOf: [{ type: "integer" }, { type: "null" }],
-            description: "ID of an existing group. Null to create a new group.",
-          },
-          name: {
-            anyOf: [{ type: "string" }, { type: "null" }],
-            description: "Name for the group. Required when creating a new group.",
-          },
-          tabIds: {
-            type: "array",
-            items: { type: "integer" },
-            description: "Tab IDs to assign to this group.",
-          },
-        },
-        required: ["groupId", "name", "tabIds"],
-        additionalProperties: false,
-      },
-    },
-  },
-  required: ["groups"],
-  additionalProperties: false,
+const specComponents = (spec as Record<string, unknown>).components as {
+  schemas: Record<string, unknown>;
 };
+
+export const outputSchema = specComponents.schemas.GroupResponse as Record<string, unknown>;
 
 export const SYSTEM_PROMPT = [
   "You are a browser tab grouping assistant.",

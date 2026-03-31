@@ -45,7 +45,7 @@ export default defineBackground(() => {
   }
 
   async function getExistingGroups(): Promise<ExistingGroup[]> {
-    const allTabs = await chrome.tabs.query({});
+    const allTabs = await chrome.tabs.query({ windowType: "normal" });
     const groupMap = new Map<number, number[]>();
 
     for (const tab of allTabs) {
@@ -79,7 +79,7 @@ export default defineBackground(() => {
   async function applyGrouping(result: GroupResponse): Promise<void> {
     // Build normalized name → { groupId, originalName } map from existing groups
     const nameToGroup = new Map<string, { groupId: number; name: string }>();
-    const allTabs = await chrome.tabs.query({});
+    const allTabs = await chrome.tabs.query({ windowType: "normal" });
     for (const tab of allTabs) {
       if (tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) {
         try {
@@ -124,18 +124,22 @@ export default defineBackground(() => {
       }
 
       if (targetGroupId == null && group.name) {
-        const newGroupId = await chrome.tabs.group({ tabIds });
-        await chrome.tabGroups.update(newGroupId, {
-          title: group.name,
-          color: colorForGroup(group.name),
-        });
-        nameToGroup.set(normalizeName(group.name), { groupId: newGroupId, name: group.name });
+        try {
+          const newGroupId = await chrome.tabs.group({ tabIds });
+          await chrome.tabGroups.update(newGroupId, {
+            title: group.name,
+            color: colorForGroup(group.name),
+          });
+          nameToGroup.set(normalizeName(group.name), { groupId: newGroupId, name: group.name });
+        } catch (err) {
+          console.error("[zenodotus] failed to create group:", group.name, err);
+        }
       }
     }
   }
 
   async function organizeAllTabs(): Promise<void> {
-    const allTabs = await chrome.tabs.query({});
+    const allTabs = await chrome.tabs.query({ windowType: "normal" });
     const existingGroups = await getExistingGroups();
     const { prompt, model, thinking } = await chrome.storage.local.get({
       prompt: "",

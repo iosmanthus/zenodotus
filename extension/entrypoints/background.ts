@@ -194,16 +194,22 @@ export default defineBackground(() => {
   // Message handling from popup
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (msg.action === "organize") {
-      // Fire and forget — don't block on sendResponse
       chrome.storage.local.set({ organizeStatus: "organizing" });
+      const organizeTimeout = setTimeout(() => {
+        chrome.storage.local.set({ organizeStatus: "error", organizeError: "Timed out" });
+      }, 30000);
       organizeAllTabs()
-        .then(() => chrome.storage.local.set({ organizeStatus: "done" }))
-        .catch((err) =>
+        .then(() => {
+          clearTimeout(organizeTimeout);
+          chrome.storage.local.set({ organizeStatus: "done" });
+        })
+        .catch((err) => {
+          clearTimeout(organizeTimeout);
           chrome.storage.local.set({
             organizeStatus: "error",
             organizeError: err instanceof Error ? err.message : "Unknown error",
-          }),
-        );
+          });
+        });
       sendResponse({ success: true });
       return false;
     }

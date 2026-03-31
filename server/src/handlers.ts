@@ -1,6 +1,6 @@
 import type { components } from "@zenodotus/api-spec/schema";
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { assignGroups } from "./providers/claude-code.js";
+import { assignGroups } from "./providers/claude-code";
 
 type GroupRequest = components["schemas"]["GroupRequest"];
 

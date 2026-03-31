@@ -2,7 +2,7 @@ import cors from "@fastify/cors";
 import { spec } from "@zenodotus/api-spec";
 import Fastify from "fastify";
 import openapiGlue from "fastify-openapi-glue";
-import { serviceHandlers } from "./handlers.js";
+import { serviceHandlers } from "./handlers";
 
 const PORT = 18080;
 

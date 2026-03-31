@@ -1,7 +1,7 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import openapiGlue from "fastify-openapi-glue";
-import { getSpecPath } from "@zenodotus/api-spec";
+import { spec } from "@zenodotus/api-spec";
 import { serviceHandlers } from "./handlers.js";
 
 const PORT = 18080;
@@ -11,7 +11,7 @@ const app = Fastify({ logger: true });
 await app.register(cors);
 
 await app.register(openapiGlue, {
-  specification: getSpecPath(),
+  specification: spec,
   serviceHandlers,
 });
 

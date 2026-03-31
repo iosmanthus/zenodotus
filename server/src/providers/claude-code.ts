@@ -1,5 +1,5 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { loadSpec } from "@zenodotus/api-spec";
+import { spec } from "@zenodotus/api-spec";
 import type { components } from "@zenodotus/api-spec/schema";
 
 type GroupRequest = components["schemas"]["GroupRequest"];
@@ -16,20 +16,12 @@ const SYSTEM_PROMPT = [
   "4. Tabs that do not fit any group should be omitted from the response.",
 ].join("\n");
 
-let outputInstruction: string | null = null;
-
-async function getOutputInstruction(): Promise<string> {
-  if (outputInstruction) return outputInstruction;
-  const spec = await loadSpec();
-  const schema = spec.components?.schemas?.GroupResponse;
-  outputInstruction = [
-    "Respond with ONLY a JSON object matching this schema:",
-    JSON.stringify(schema, null, 2),
-    "",
-    "No other text. Only the JSON object.",
-  ].join("\n");
-  return outputInstruction;
-}
+const OUTPUT_INSTRUCTION = [
+  "Respond with ONLY a JSON object matching this schema:",
+  JSON.stringify((spec as any).components?.schemas?.GroupResponse, null, 2),
+  "",
+  "No other text. Only the JSON object.",
+].join("\n");
 
 function buildUserPrompt(request: GroupRequest): string {
   const parts: string[] = [];
@@ -44,9 +36,8 @@ function buildUserPrompt(request: GroupRequest): string {
 }
 
 export async function assignGroups(request: GroupRequest): Promise<GroupResponse | null> {
-  const instruction = await getOutputInstruction();
   const userPrompt = buildUserPrompt(request);
-  const fullPrompt = [SYSTEM_PROMPT, userPrompt, instruction].join("\n\n");
+  const fullPrompt = [SYSTEM_PROMPT, userPrompt, OUTPUT_INSTRUCTION].join("\n\n");
 
   const events = [];
   for await (const event of query({

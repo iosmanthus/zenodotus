@@ -1,0 +1,368 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Zenodotus API",
+    "description": "Local server API for intelligent LLM-powered tab grouping",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "healthCheck",
+        "summary": "Health check",
+        "responses": {
+          "200": {
+            "description": "Server is running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/group": {
+      "post": {
+        "operationId": "groupTabs",
+        "summary": "Group browser tabs using LLM",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "tabs"
+                ],
+                "properties": {
+                  "tabs": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "tabId",
+                        "windowId",
+                        "url",
+                        "title"
+                      ],
+                      "properties": {
+                        "tabId": {
+                          "type": "number",
+                          "description": "Chrome tab ID"
+                        },
+                        "windowId": {
+                          "type": "number",
+                          "description": "Chrome window ID"
+                        },
+                        "url": {
+                          "type": "string",
+                          "description": "Tab URL"
+                        },
+                        "title": {
+                          "type": "string",
+                          "description": "Tab title"
+                        },
+                        "description": {
+                          "type": "string",
+                          "description": "Page meta description"
+                        }
+                      }
+                    }
+                  },
+                  "existingGroups": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "groupId",
+                        "name",
+                        "tabIds"
+                      ],
+                      "properties": {
+                        "groupId": {
+                          "type": "number",
+                          "description": "Chrome tab group ID"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "Group name"
+                        },
+                        "tabIds": {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          },
+                          "description": "Tab IDs currently in this group"
+                        }
+                      }
+                    }
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "description": "User's custom grouping strategy prompt"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tab grouping result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "groups"
+                  ],
+                  "properties": {
+                    "groups": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "tabIds"
+                        ],
+                        "properties": {
+                          "groupId": {
+                            "type": "number",
+                            "description": "ID of an existing group. Omit to create a new group."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Name for the group. Required when creating a new group."
+                          },
+                          "tabIds": {
+                            "type": "array",
+                            "items": {
+                              "type": "number"
+                            },
+                            "description": "Tab IDs to assign to this group"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TabInfo": {
+        "type": "object",
+        "required": [
+          "tabId",
+          "windowId",
+          "url",
+          "title"
+        ],
+        "properties": {
+          "tabId": {
+            "type": "number",
+            "description": "Chrome tab ID"
+          },
+          "windowId": {
+            "type": "number",
+            "description": "Chrome window ID"
+          },
+          "url": {
+            "type": "string",
+            "description": "Tab URL"
+          },
+          "title": {
+            "type": "string",
+            "description": "Tab title"
+          },
+          "description": {
+            "type": "string",
+            "description": "Page meta description"
+          }
+        }
+      },
+      "ExistingGroup": {
+        "type": "object",
+        "required": [
+          "groupId",
+          "name",
+          "tabIds"
+        ],
+        "properties": {
+          "groupId": {
+            "type": "number",
+            "description": "Chrome tab group ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Group name"
+          },
+          "tabIds": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "Tab IDs currently in this group"
+          }
+        }
+      },
+      "GroupRequest": {
+        "type": "object",
+        "required": [
+          "tabs"
+        ],
+        "properties": {
+          "tabs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "tabId",
+                "windowId",
+                "url",
+                "title"
+              ],
+              "properties": {
+                "tabId": {
+                  "type": "number",
+                  "description": "Chrome tab ID"
+                },
+                "windowId": {
+                  "type": "number",
+                  "description": "Chrome window ID"
+                },
+                "url": {
+                  "type": "string",
+                  "description": "Tab URL"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Tab title"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Page meta description"
+                }
+              }
+            }
+          },
+          "existingGroups": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "groupId",
+                "name",
+                "tabIds"
+              ],
+              "properties": {
+                "groupId": {
+                  "type": "number",
+                  "description": "Chrome tab group ID"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Group name"
+                },
+                "tabIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "description": "Tab IDs currently in this group"
+                }
+              }
+            }
+          },
+          "prompt": {
+            "type": "string",
+            "description": "User's custom grouping strategy prompt"
+          }
+        }
+      },
+      "GroupAssignment": {
+        "type": "object",
+        "required": [
+          "tabIds"
+        ],
+        "properties": {
+          "groupId": {
+            "type": "number",
+            "description": "ID of an existing group. Omit to create a new group."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the group. Required when creating a new group."
+          },
+          "tabIds": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "Tab IDs to assign to this group"
+          }
+        }
+      },
+      "GroupResponse": {
+        "type": "object",
+        "required": [
+          "groups"
+        ],
+        "properties": {
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "tabIds"
+              ],
+              "properties": {
+                "groupId": {
+                  "type": "number",
+                  "description": "ID of an existing group. Omit to create a new group."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Name for the group. Required when creating a new group."
+                },
+                "tabIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "description": "Tab IDs to assign to this group"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

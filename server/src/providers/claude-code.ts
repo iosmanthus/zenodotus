@@ -59,16 +59,24 @@ export async function assignGroups(request: GroupRequest): Promise<GroupResponse
   const userPrompt = buildUserPrompt(request);
   const fullPrompt = [SYSTEM_PROMPT, userPrompt].join("\n\n");
 
-  for await (const _event of query({
-    prompt: fullPrompt,
-    options: {
-      maxTurns: 1,
-      disallowedTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
-      mcpServers: { zenodotus: mcpServer },
-      persistSession: false,
-    },
-  })) {
-    // drain events
+  const abortController = new AbortController();
+  const timeout = setTimeout(() => abortController.abort(), 30000);
+
+  try {
+    for await (const _event of query({
+      prompt: fullPrompt,
+      options: {
+        maxTurns: 1,
+        disallowedTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+        mcpServers: { zenodotus: mcpServer },
+        persistSession: false,
+        abortController,
+      },
+    })) {
+      // drain events
+    }
+  } finally {
+    clearTimeout(timeout);
   }
 
   return captured;

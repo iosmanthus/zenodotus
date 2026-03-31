@@ -5,12 +5,17 @@
   "type": "module",
   "exports": {
     "./openapi.yaml": "./openapi.yaml",
-    "./schema": "./generated/schema.d.ts"
+    "./schema": "./generated/schema.d.ts",
+    ".": "./src/index.ts"
   },
   "scripts": {
     "generate": "openapi-typescript openapi.yaml -o generated/schema.d.ts"
   },
+  "dependencies": {
+    "@apidevtools/swagger-parser": "^10.1.1"
+  },
   "devDependencies": {
-    "openapi-typescript": "^7.0.0"
+    "openapi-typescript": "^7.0.0",
+    "typescript": "^5.8.0"
   }
 }

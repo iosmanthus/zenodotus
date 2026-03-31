@@ -1,6 +1,6 @@
 # Zenodotus
 
-Intelligent browser tab grouping powered by LLM. Named after the first librarian of the Library of Alexandria.
+Intelligent browser tab grouping powered by LLM.
 
 ## How It Works
 
@@ -12,9 +12,7 @@ Chrome Extension  -->  Local Server (:18080)  -->  Claude (via subscription)
 
 ## Prerequisites
 
-- [Nix](https://nixos.org/) with flakes enabled
 - [Claude Code](https://claude.com/product/claude-code) CLI logged in (`claude login`)
-- Claude Max subscription (for Claude Code usage)
 - Chromium-based browser (Chrome, Brave, Edge, etc.)
 
 ## Setup
@@ -22,7 +20,7 @@ Chrome Extension  -->  Local Server (:18080)  -->  Claude (via subscription)
 ```bash
 git clone <repo-url> && cd zenodotus
 
-# Enter dev shell
+# Enter dev shell if using Nix:
 nix develop
 # Or use direnv: direnv allow
 
@@ -82,20 +80,3 @@ Expand **Settings** to configure:
 - **Custom Prompt** -- Additional instructions for the LLM. Example: `"Group by project, use Chinese names"`
 
 Click **Save** to persist settings.
-
-## Project Structure
-
-```
-zenodotus/
-  packages/api-spec/     -- OpenAPI spec + generated TypeScript types
-  server/                -- Fastify server (spec-driven) + Claude Agent SDK
-  extension/             -- WXT Chrome extension (Manifest V3)
-  flake.nix              -- Nix dev shell
-```
-
-## Tech Stack
-
-- **Extension**: TypeScript, WXT (Vite-based), Chrome Manifest V3
-- **Server**: TypeScript, Fastify, fastify-openapi-glue, Claude Agent SDK
-- **Shared**: OpenAPI 3.0 spec, openapi-typescript for type generation
-- **Tooling**: pnpm workspaces, Biome (lint/format), Vitest, Nix flakes

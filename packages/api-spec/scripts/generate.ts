@@ -1,7 +1,7 @@
-import SwaggerParser from "@apidevtools/swagger-parser";
 import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import SwaggerParser from "@apidevtools/swagger-parser";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const specPath = join(__dirname, "../openapi.yaml");

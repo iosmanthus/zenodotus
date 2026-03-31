@@ -1,6 +1,6 @@
+import type { components } from "@zenodotus/api-spec/schema";
 import { requestGrouping } from "@/utils/api";
 import { colorForGroup } from "@/utils/color";
-import type { components } from "@zenodotus/api-spec/schema";
 
 type TabInfo = components["schemas"]["TabInfo"];
 type ExistingGroup = components["schemas"]["ExistingGroup"];
@@ -27,9 +27,7 @@ export default defineBackground(() => {
   }
 
   // I2: return null if tab.id or tab.windowId is undefined
-  async function collectTabInfo(
-    tab: chrome.tabs.Tab,
-  ): Promise<TabInfo | null> {
+  async function collectTabInfo(tab: chrome.tabs.Tab): Promise<TabInfo | null> {
     if (tab.id == null || tab.windowId == null) return null;
 
     const description = await getMetaDescription(tab.id);
@@ -49,10 +47,7 @@ export default defineBackground(() => {
     for (const tab of allTabs) {
       // I2: guard against undefined tab.id
       if (tab.id == null) continue;
-      if (
-        tab.groupId !== -1 &&
-        tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE
-      ) {
+      if (tab.groupId !== -1 && tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) {
         if (!groupMap.has(tab.groupId)) {
           groupMap.set(tab.groupId, []);
         }
@@ -114,10 +109,7 @@ export default defineBackground(() => {
     }
   }
 
-  async function createNewGroup(
-    name: string,
-    tabIds: number[],
-  ): Promise<void> {
+  async function createNewGroup(name: string, tabIds: number[]): Promise<void> {
     try {
       const groupId = await chrome.tabs.group({ tabIds });
       await chrome.tabGroups.update(groupId, {
@@ -135,9 +127,7 @@ export default defineBackground(() => {
     const { prompt } = await chrome.storage.local.get({ prompt: "" });
     const tabInfoResults = await Promise.all(allTabs.map(collectTabInfo));
     // I2: filter out nulls from collectTabInfo
-    const tabInfos = tabInfoResults.filter(
-      (t): t is TabInfo => t !== null,
-    );
+    const tabInfos = tabInfoResults.filter((t): t is TabInfo => t !== null);
 
     const result = await requestGrouping({
       tabs: tabInfos,
@@ -159,9 +149,7 @@ export default defineBackground(() => {
     const existingGroups = await getExistingGroups();
     const { prompt } = await chrome.storage.local.get({ prompt: "" });
     const tabInfoResults = await Promise.all(tabs.map(collectTabInfo));
-    const tabInfos = tabInfoResults.filter(
-      (t): t is TabInfo => t !== null,
-    );
+    const tabInfos = tabInfoResults.filter((t): t is TabInfo => t !== null);
 
     if (tabInfos.length === 0) return;
 
@@ -182,11 +170,7 @@ export default defineBackground(() => {
     });
     if (!autoGroupEnabled) return;
     if (changeInfo.status !== "complete") return;
-    if (
-      tab.groupId !== -1 &&
-      tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE
-    )
-      return;
+    if (tab.groupId !== -1 && tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) return;
 
     // S2: add to pending set and reset debounce timer
     pendingTabs.add(tab);
@@ -203,9 +187,7 @@ export default defineBackground(() => {
     if (msg.action === "organize") {
       organizeAllTabs()
         .then(() => sendResponse({ success: true }))
-        .catch((err: Error) =>
-          sendResponse({ success: false, error: err.message }),
-        );
+        .catch((err: Error) => sendResponse({ success: false, error: err.message }));
       return true;
     }
 
@@ -219,9 +201,7 @@ export default defineBackground(() => {
             autoGroupEnabled: msg.enabled,
           }),
         )
-        .catch((err: Error) =>
-          sendResponse({ success: false, error: err.message }),
-        );
+        .catch((err: Error) => sendResponse({ success: false, error: err.message }));
       return true;
     }
 
@@ -229,9 +209,8 @@ export default defineBackground(() => {
     if (msg.action === "getAutoGroup") {
       chrome.storage.local
         .get({ autoGroupEnabled: false })
-        .then(
-          (data: { autoGroupEnabled: boolean }) =>
-            sendResponse({ autoGroupEnabled: data.autoGroupEnabled }),
+        .then((data: { autoGroupEnabled: boolean }) =>
+          sendResponse({ autoGroupEnabled: data.autoGroupEnabled }),
         )
         .catch(() => sendResponse({ autoGroupEnabled: false }));
       return true;

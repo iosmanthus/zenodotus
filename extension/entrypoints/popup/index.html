@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="./style.css" />
@@ -9,10 +9,10 @@
       <div id="status-bar">
         <span id="status-dot"></span>
         <span id="status-text">Checking...</span>
-        <button id="check-btn" title="Check connection">&#x21bb;</button>
+        <button type="button" id="check-btn" title="Check connection">&#x21bb;</button>
       </div>
 
-      <button id="organize-btn" disabled>Organize Tabs</button>
+      <button type="button" id="organize-btn" disabled>Organize Tabs</button>
       <p id="error-msg"></p>
 
       <label>
@@ -27,7 +27,7 @@
           rows="4"
           placeholder="e.g. Group by project, use English names"
         ></textarea>
-        <button id="save-prompt-btn">Save</button>
+        <button type="button" id="save-prompt-btn">Save</button>
       </details>
     </div>
     <script type="module" src="./main.ts"></script>

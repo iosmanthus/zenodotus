@@ -3,13 +3,9 @@ import { checkHealth } from "@/utils/api";
 const statusDot = document.getElementById("status-dot")!;
 const statusText = document.getElementById("status-text")!;
 const checkBtn = document.getElementById("check-btn")!;
-const organizeBtn = document.getElementById(
-  "organize-btn",
-) as HTMLButtonElement;
+const organizeBtn = document.getElementById("organize-btn") as HTMLButtonElement;
 const autoToggle = document.getElementById("auto-toggle") as HTMLInputElement;
-const promptInput = document.getElementById(
-  "prompt-input",
-) as HTMLTextAreaElement;
+const promptInput = document.getElementById("prompt-input") as HTMLTextAreaElement;
 const savePromptBtn = document.getElementById("save-prompt-btn")!;
 const errorMsg = document.getElementById("error-msg")!;
 

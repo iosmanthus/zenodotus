@@ -17,9 +17,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "ok"
-                  ],
+                  "required": ["ok"],
                   "properties": {
                     "ok": {
                       "type": "boolean"
@@ -42,20 +40,13 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "tabs"
-                ],
+                "required": ["tabs"],
                 "properties": {
                   "tabs": {
                     "type": "array",
                     "items": {
                       "type": "object",
-                      "required": [
-                        "tabId",
-                        "windowId",
-                        "url",
-                        "title"
-                      ],
+                      "required": ["tabId", "windowId", "url", "title"],
                       "properties": {
                         "tabId": {
                           "type": "integer",
@@ -84,11 +75,7 @@
                     "type": "array",
                     "items": {
                       "type": "object",
-                      "required": [
-                        "groupId",
-                        "name",
-                        "tabIds"
-                      ],
+                      "required": ["groupId", "name", "tabIds"],
                       "properties": {
                         "groupId": {
                           "type": "integer",
@@ -124,17 +111,13 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "groups"
-                  ],
+                  "required": ["groups"],
                   "properties": {
                     "groups": {
                       "type": "array",
                       "items": {
                         "type": "object",
-                        "required": [
-                          "tabIds"
-                        ],
+                        "required": ["tabIds"],
                         "properties": {
                           "groupId": {
                             "type": "integer",
@@ -165,9 +148,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "error"
-                  ],
+                  "required": ["error"],
                   "properties": {
                     "error": {
                       "type": "string",
@@ -184,9 +165,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "error"
-                  ],
+                  "required": ["error"],
                   "properties": {
                     "error": {
                       "type": "string",
@@ -205,9 +184,7 @@
     "schemas": {
       "ErrorResponse": {
         "type": "object",
-        "required": [
-          "error"
-        ],
+        "required": ["error"],
         "properties": {
           "error": {
             "type": "string",
@@ -217,9 +194,7 @@
       },
       "HealthResponse": {
         "type": "object",
-        "required": [
-          "ok"
-        ],
+        "required": ["ok"],
         "properties": {
           "ok": {
             "type": "boolean"
@@ -228,12 +203,7 @@
       },
       "TabInfo": {
         "type": "object",
-        "required": [
-          "tabId",
-          "windowId",
-          "url",
-          "title"
-        ],
+        "required": ["tabId", "windowId", "url", "title"],
         "properties": {
           "tabId": {
             "type": "integer",
@@ -259,11 +229,7 @@
       },
       "ExistingGroup": {
         "type": "object",
-        "required": [
-          "groupId",
-          "name",
-          "tabIds"
-        ],
+        "required": ["groupId", "name", "tabIds"],
         "properties": {
           "groupId": {
             "type": "integer",
@@ -284,20 +250,13 @@
       },
       "GroupRequest": {
         "type": "object",
-        "required": [
-          "tabs"
-        ],
+        "required": ["tabs"],
         "properties": {
           "tabs": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": [
-                "tabId",
-                "windowId",
-                "url",
-                "title"
-              ],
+              "required": ["tabId", "windowId", "url", "title"],
               "properties": {
                 "tabId": {
                   "type": "integer",
@@ -326,11 +285,7 @@
             "type": "array",
             "items": {
               "type": "object",
-              "required": [
-                "groupId",
-                "name",
-                "tabIds"
-              ],
+              "required": ["groupId", "name", "tabIds"],
               "properties": {
                 "groupId": {
                   "type": "integer",
@@ -358,9 +313,7 @@
       },
       "GroupAssignment": {
         "type": "object",
-        "required": [
-          "tabIds"
-        ],
+        "required": ["tabIds"],
         "properties": {
           "groupId": {
             "type": "integer",
@@ -381,17 +334,13 @@
       },
       "GroupResponse": {
         "type": "object",
-        "required": [
-          "groups"
-        ],
+        "required": ["groups"],
         "properties": {
           "groups": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": [
-                "tabIds"
-              ],
+              "required": ["tabIds"],
               "properties": {
                 "groupId": {
                   "type": "integer",

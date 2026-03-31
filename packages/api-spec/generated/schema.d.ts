@@ -4,157 +4,157 @@
  */
 
 export interface paths {
-    "/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Health check */
-        get: operations["healthCheck"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+  "/health": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/group": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Group browser tabs using LLM */
-        post: operations["groupTabs"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Health check */
+    get: operations["healthCheck"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/group": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
+    get?: never;
+    put?: never;
+    /** Group browser tabs using LLM */
+    post: operations["groupTabs"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: {
-        ErrorResponse: {
-            /** @description Error message */
-            error: string;
-        };
-        HealthResponse: {
-            ok: boolean;
-        };
-        TabInfo: {
-            /** @description Chrome tab ID */
-            tabId: number;
-            /** @description Chrome window ID */
-            windowId: number;
-            /** @description Tab URL */
-            url: string;
-            /** @description Tab title */
-            title: string;
-            /** @description Page meta description */
-            description?: string;
-        };
-        ExistingGroup: {
-            /** @description Chrome tab group ID */
-            groupId: number;
-            /** @description Group name */
-            name: string;
-            /** @description Tab IDs currently in this group */
-            tabIds: number[];
-        };
-        GroupRequest: {
-            tabs: components["schemas"]["TabInfo"][];
-            existingGroups?: components["schemas"]["ExistingGroup"][];
-            /** @description User's custom grouping strategy prompt */
-            prompt?: string;
-        };
-        GroupAssignment: {
-            /** @description ID of an existing group. Omit to create a new group. */
-            groupId?: number;
-            /** @description Name for the group. Required when creating a new group. */
-            name?: string;
-            /** @description Tab IDs to assign to this group */
-            tabIds: number[];
-        };
-        GroupResponse: {
-            groups: components["schemas"]["GroupAssignment"][];
-        };
+  schemas: {
+    ErrorResponse: {
+      /** @description Error message */
+      error: string;
     };
-    responses: never;
-    parameters: never;
-    requestBodies: never;
-    headers: never;
-    pathItems: never;
+    HealthResponse: {
+      ok: boolean;
+    };
+    TabInfo: {
+      /** @description Chrome tab ID */
+      tabId: number;
+      /** @description Chrome window ID */
+      windowId: number;
+      /** @description Tab URL */
+      url: string;
+      /** @description Tab title */
+      title: string;
+      /** @description Page meta description */
+      description?: string;
+    };
+    ExistingGroup: {
+      /** @description Chrome tab group ID */
+      groupId: number;
+      /** @description Group name */
+      name: string;
+      /** @description Tab IDs currently in this group */
+      tabIds: number[];
+    };
+    GroupRequest: {
+      tabs: components["schemas"]["TabInfo"][];
+      existingGroups?: components["schemas"]["ExistingGroup"][];
+      /** @description User's custom grouping strategy prompt */
+      prompt?: string;
+    };
+    GroupAssignment: {
+      /** @description ID of an existing group. Omit to create a new group. */
+      groupId?: number;
+      /** @description Name for the group. Required when creating a new group. */
+      name?: string;
+      /** @description Tab IDs to assign to this group */
+      tabIds: number[];
+    };
+    GroupResponse: {
+      groups: components["schemas"]["GroupAssignment"][];
+    };
+  };
+  responses: never;
+  parameters: never;
+  requestBodies: never;
+  headers: never;
+  pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    healthCheck: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Server is running */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HealthResponse"];
-                };
-            };
-        };
+  healthCheck: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    groupTabs: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Server is running */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["GroupRequest"];
-            };
+        content: {
+          "application/json": components["schemas"]["HealthResponse"];
         };
-        responses: {
-            /** @description Tab grouping result */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GroupResponse"];
-                };
-            };
-            /** @description Invalid request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
+      };
     };
+  };
+  groupTabs: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["GroupRequest"];
+      };
+    };
+    responses: {
+      /** @description Tab grouping result */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GroupResponse"];
+        };
+      };
+      /** @description Invalid request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
 }

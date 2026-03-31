@@ -17,9 +17,7 @@ export async function checkHealth(): Promise<boolean> {
   }
 }
 
-export async function requestGrouping(
-  request: GroupRequest,
-): Promise<GroupResponse | null> {
+export async function requestGrouping(request: GroupRequest): Promise<GroupResponse | null> {
   try {
     const res = await fetch(`${SERVER_URL}/group`, {
       method: "POST",

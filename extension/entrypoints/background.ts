@@ -8,9 +8,12 @@ type GroupResponse = components["schemas"]["GroupResponse"];
 type NonEmptyArray<T> = [T, ...T[]];
 
 export default defineBackground(() => {
-  // S2: debounce auto-grouping — collect pending tabs and batch into one request
+  // Batching: debounce 2s + max wait 10s
+  const DEBOUNCE_MS = 2000;
+  const MAX_WAIT_MS = 10000;
   const pendingTabs = new Set<chrome.tabs.Tab>();
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  let maxWaitTimer: ReturnType<typeof setTimeout> | null = null;
 
   async function getMetaDescription(tabId: number): Promise<string> {
     try {
@@ -136,11 +139,17 @@ export default defineBackground(() => {
     if (result) await applyGrouping(result);
   }
 
-  // S2: flush pending tabs in a single batched request
+  function flush(): void {
+    if (debounceTimer != null) clearTimeout(debounceTimer);
+    if (maxWaitTimer != null) clearTimeout(maxWaitTimer);
+    debounceTimer = null;
+    maxWaitTimer = null;
+    flushPendingTabs();
+  }
+
   async function flushPendingTabs(): Promise<void> {
     const tabs = Array.from(pendingTabs);
     pendingTabs.clear();
-    debounceTimer = null;
 
     if (tabs.length === 0) return;
 
@@ -170,14 +179,16 @@ export default defineBackground(() => {
     if (changeInfo.status !== "complete") return;
     if (tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) return;
 
-    // S2: add to pending set and reset debounce timer
     pendingTabs.add(tab);
-    if (debounceTimer != null) {
-      clearTimeout(debounceTimer);
+
+    // Reset debounce timer on each new tab
+    if (debounceTimer != null) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(flush, DEBOUNCE_MS);
+
+    // Start max wait timer on first tab in batch
+    if (maxWaitTimer == null) {
+      maxWaitTimer = setTimeout(flush, MAX_WAIT_MS);
     }
-    debounceTimer = setTimeout(() => {
-      flushPendingTabs();
-    }, 2000);
   });
 
   // Message handling from popup

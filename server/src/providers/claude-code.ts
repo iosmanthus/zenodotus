@@ -43,7 +43,8 @@ export async function assignGroups(request: GroupRequest): Promise<GroupResponse
     for await (const event of query({
       prompt: fullPrompt,
       options: {
-        model: "claude-sonnet-4-6",
+        model: "sonnet",
+        thinking: { type: "disabled" },
         maxTurns: 3,
         persistSession: false,
         abortController,

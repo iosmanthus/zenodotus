@@ -5,6 +5,7 @@ import { colorForGroup } from "@/utils/color";
 type TabInfo = components["schemas"]["TabInfo"];
 type ExistingGroup = components["schemas"]["ExistingGroup"];
 type GroupResponse = components["schemas"]["GroupResponse"];
+type NonEmptyArray<T> = [T, ...T[]];
 
 export default defineBackground(() => {
   // S2: debounce auto-grouping — collect pending tabs and batch into one request
@@ -87,7 +88,7 @@ export default defineBackground(() => {
       }
       const [first, ...rest] = validTabIds;
       if (first == null) continue;
-      const tabIds: [number, ...number[]] = [first, ...rest];
+      const tabIds: NonEmptyArray<number> = [first, ...rest];
 
       if (group.groupId != null) {
         try {
@@ -111,7 +112,7 @@ export default defineBackground(() => {
     }
   }
 
-  async function createNewGroup(name: string, tabIds: [number, ...number[]]): Promise<void> {
+  async function createNewGroup(name: string, tabIds: NonEmptyArray<number>): Promise<void> {
     try {
       const groupId = await chrome.tabs.group({ tabIds });
       await chrome.tabGroups.update(groupId, {

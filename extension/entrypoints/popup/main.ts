@@ -6,6 +6,7 @@ const checkBtn = document.getElementById("check-btn")!;
 const organizeBtn = document.getElementById("organize-btn") as HTMLButtonElement;
 const autoToggle = document.getElementById("auto-toggle") as HTMLInputElement;
 const serverUrlInput = document.getElementById("server-url-input") as HTMLInputElement;
+const providerInput = document.getElementById("provider-input") as HTMLInputElement;
 const modelInput = document.getElementById("model-input") as HTMLInputElement;
 const thinkingToggle = document.getElementById("thinking-toggle") as HTMLInputElement;
 const promptInput = document.getElementById("prompt-input") as HTMLTextAreaElement;
@@ -87,11 +88,19 @@ chrome.runtime.sendMessage({ action: "getAutoGroup" }).then((response) => {
 });
 
 chrome.storage.local
-  .get({ prompt: "", model: "", thinking: false, serverUrl: "", organizeStatus: null })
+  .get({
+    prompt: "",
+    model: "",
+    thinking: false,
+    serverUrl: "",
+    provider: "",
+    organizeStatus: null,
+  })
   .then((data) => {
     promptInput.value = data.prompt;
     modelInput.value = data.model;
     serverUrlInput.value = data.serverUrl;
+    providerInput.value = data.provider;
     thinkingToggle.checked = data.thinking;
     if (data.organizeStatus === "organizing") {
       setOrganizing(true);
@@ -104,6 +113,7 @@ saveSettingsBtn.addEventListener("click", () => {
     model: modelInput.value,
     thinking: thinkingToggle.checked,
     serverUrl: serverUrlInput.value,
+    provider: providerInput.value,
   });
 });
 

@@ -151,10 +151,11 @@ export default defineBackground(() => {
     log("organizeAllTabs start");
     const allTabs = await chrome.tabs.query({ windowType: "normal" });
     const existingGroups = await getExistingGroups();
-    const { prompt, model, thinking } = await chrome.storage.local.get({
+    const { prompt, model, thinking, provider } = await chrome.storage.local.get({
       prompt: "",
       model: "",
       thinking: false,
+      provider: "",
     });
     const tabInfoResults = await Promise.all(allTabs.map(collectTabInfo));
     const tabInfos = tabInfoResults.filter((t): t is TabInfo => t !== null);
@@ -166,6 +167,7 @@ export default defineBackground(() => {
       prompt,
       model: model || undefined,
       thinking: thinking || undefined,
+      provider: provider || undefined,
     });
 
     if (result) {
@@ -193,10 +195,11 @@ export default defineBackground(() => {
 
     log("auto-group: flushing", tabs.length, "pending tabs");
     const existingGroups = await getExistingGroups();
-    const { prompt, model, thinking } = await chrome.storage.local.get({
+    const { prompt, model, thinking, provider } = await chrome.storage.local.get({
       prompt: "",
       model: "",
       thinking: false,
+      provider: "",
     });
     const tabInfoResults = await Promise.all(tabs.map(collectTabInfo));
     const tabInfos = tabInfoResults.filter((t): t is TabInfo => t !== null);
@@ -209,6 +212,7 @@ export default defineBackground(() => {
       prompt,
       model: model || undefined,
       thinking: thinking || undefined,
+      provider: provider || undefined,
     });
 
     if (result) {

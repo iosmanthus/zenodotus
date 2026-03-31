@@ -58,11 +58,11 @@
                       ],
                       "properties": {
                         "tabId": {
-                          "type": "number",
+                          "type": "integer",
                           "description": "Chrome tab ID"
                         },
                         "windowId": {
-                          "type": "number",
+                          "type": "integer",
                           "description": "Chrome window ID"
                         },
                         "url": {
@@ -91,7 +91,7 @@
                       ],
                       "properties": {
                         "groupId": {
-                          "type": "number",
+                          "type": "integer",
                           "description": "Chrome tab group ID"
                         },
                         "name": {
@@ -101,7 +101,7 @@
                         "tabIds": {
                           "type": "array",
                           "items": {
-                            "type": "number"
+                            "type": "integer"
                           },
                           "description": "Tab IDs currently in this group"
                         }
@@ -137,7 +137,7 @@
                         ],
                         "properties": {
                           "groupId": {
-                            "type": "number",
+                            "type": "integer",
                             "description": "ID of an existing group. Omit to create a new group."
                           },
                           "name": {
@@ -147,12 +147,50 @@
                           "tabIds": {
                             "type": "array",
                             "items": {
-                              "type": "number"
+                              "type": "integer"
                             },
                             "description": "Tab IDs to assign to this group"
                           }
                         }
                       }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
                     }
                   }
                 }
@@ -165,6 +203,18 @@
   },
   "components": {
     "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message"
+          }
+        }
+      },
       "HealthResponse": {
         "type": "object",
         "required": [
@@ -186,11 +236,11 @@
         ],
         "properties": {
           "tabId": {
-            "type": "number",
+            "type": "integer",
             "description": "Chrome tab ID"
           },
           "windowId": {
-            "type": "number",
+            "type": "integer",
             "description": "Chrome window ID"
           },
           "url": {
@@ -216,7 +266,7 @@
         ],
         "properties": {
           "groupId": {
-            "type": "number",
+            "type": "integer",
             "description": "Chrome tab group ID"
           },
           "name": {
@@ -226,7 +276,7 @@
           "tabIds": {
             "type": "array",
             "items": {
-              "type": "number"
+              "type": "integer"
             },
             "description": "Tab IDs currently in this group"
           }
@@ -250,11 +300,11 @@
               ],
               "properties": {
                 "tabId": {
-                  "type": "number",
+                  "type": "integer",
                   "description": "Chrome tab ID"
                 },
                 "windowId": {
-                  "type": "number",
+                  "type": "integer",
                   "description": "Chrome window ID"
                 },
                 "url": {
@@ -283,7 +333,7 @@
               ],
               "properties": {
                 "groupId": {
-                  "type": "number",
+                  "type": "integer",
                   "description": "Chrome tab group ID"
                 },
                 "name": {
@@ -293,7 +343,7 @@
                 "tabIds": {
                   "type": "array",
                   "items": {
-                    "type": "number"
+                    "type": "integer"
                   },
                   "description": "Tab IDs currently in this group"
                 }
@@ -313,7 +363,7 @@
         ],
         "properties": {
           "groupId": {
-            "type": "number",
+            "type": "integer",
             "description": "ID of an existing group. Omit to create a new group."
           },
           "name": {
@@ -323,7 +373,7 @@
           "tabIds": {
             "type": "array",
             "items": {
-              "type": "number"
+              "type": "integer"
             },
             "description": "Tab IDs to assign to this group"
           }
@@ -344,7 +394,7 @@
               ],
               "properties": {
                 "groupId": {
-                  "type": "number",
+                  "type": "integer",
                   "description": "ID of an existing group. Omit to create a new group."
                 },
                 "name": {
@@ -354,7 +404,7 @@
                 "tabIds": {
                   "type": "array",
                   "items": {
-                    "type": "number"
+                    "type": "integer"
                   },
                   "description": "Tab IDs to assign to this group"
                 }

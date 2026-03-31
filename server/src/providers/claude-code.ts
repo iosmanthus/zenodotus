@@ -1,5 +1,5 @@
-import { query } from "@anthropic-ai/claude-agent-sdk";
-import { spec } from "@zenodotus/api-spec";
+import { query, tool, createSdkMcpServer } from "@anthropic-ai/claude-agent-sdk";
+import { z } from "zod";
 import type { components } from "@zenodotus/api-spec/schema";
 
 type GroupRequest = components["schemas"]["GroupRequest"];
@@ -14,13 +14,8 @@ const SYSTEM_PROMPT = [
   "2. Only create new groups when no existing group fits.",
   "3. Keep group names short (2-4 words).",
   "4. Tabs that do not fit any group should be omitted from the response.",
-].join("\n");
-
-const OUTPUT_INSTRUCTION = [
-  "Respond with ONLY a JSON object matching this schema:",
-  JSON.stringify((spec as any).components?.schemas?.GroupResponse, null, 2),
   "",
-  "No other text. Only the JSON object.",
+  "Use the assign_tab_groups tool to respond.",
 ].join("\n");
 
 function buildUserPrompt(request: GroupRequest): string {
@@ -36,33 +31,45 @@ function buildUserPrompt(request: GroupRequest): string {
 }
 
 export async function assignGroups(request: GroupRequest): Promise<GroupResponse | null> {
-  const userPrompt = buildUserPrompt(request);
-  const fullPrompt = [SYSTEM_PROMPT, userPrompt, OUTPUT_INSTRUCTION].join("\n\n");
+  let captured: GroupResponse | null = null;
 
-  const events = [];
-  for await (const event of query({
+  const assignTool = tool(
+    "assign_tab_groups",
+    "Assign browser tabs to groups based on their content and context.",
+    {
+      groups: z.array(
+        z.object({
+          groupId: z.number().optional().describe("ID of an existing group. Omit to create a new group."),
+          name: z.string().optional().describe("Name for the group. Required when creating a new group."),
+          tabIds: z.array(z.number()).describe("Tab IDs to assign to this group."),
+        })
+      ),
+    },
+    async (args) => {
+      captured = { groups: args.groups };
+      return { content: [{ type: "text" as const, text: "Groups assigned." }] };
+    },
+  );
+
+  const mcpServer = createSdkMcpServer({
+    name: "zenodotus",
+    tools: [assignTool],
+  });
+
+  const userPrompt = buildUserPrompt(request);
+  const fullPrompt = [SYSTEM_PROMPT, userPrompt].join("\n\n");
+
+  for await (const _event of query({
     prompt: fullPrompt,
     options: {
       maxTurns: 1,
-      allowedTools: [],
+      allowedTools: ["mcp__zenodotus__assign_tab_groups"],
+      mcpServers: { zenodotus: mcpServer },
       persistSession: false,
     },
   })) {
-    events.push(event);
+    // drain events
   }
 
-  for (const event of events) {
-    if (event.type === "assistant" && event.message?.content) {
-      for (const block of event.message.content) {
-        if (block.type === "text") {
-          const jsonMatch = block.text.match(/\{[\s\S]*"groups"[\s\S]*\}/);
-          if (jsonMatch) {
-            return JSON.parse(jsonMatch[0]) as GroupResponse;
-          }
-        }
-      }
-    }
-  }
-
-  return null;
+  return captured;
 }

@@ -26,9 +26,9 @@ function buildUserPrompt(request: GroupRequest): string {
     parts.push(request.prompt);
   }
   if (request.existingGroups && request.existingGroups.length > 0) {
-    parts.push(`Existing groups:\n${JSON.stringify(request.existingGroups, null, 2)}`);
+    parts.push(`Existing groups:\n${JSON.stringify(request.existingGroups)}`);
   }
-  parts.push(`Tabs to group:\n${JSON.stringify(request.tabs, null, 2)}`);
+  parts.push(`Tabs to group:\n${JSON.stringify(request.tabs)}`);
   return parts.join("\n\n");
 }
 
@@ -43,6 +43,7 @@ export async function assignGroups(request: GroupRequest): Promise<GroupResponse
     for await (const event of query({
       prompt: fullPrompt,
       options: {
+        model: "sonnet",
         maxTurns: 3,
         persistSession: false,
         abortController,

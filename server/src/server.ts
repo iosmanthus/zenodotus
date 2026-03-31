@@ -4,7 +4,7 @@ import Fastify from "fastify";
 import openapiGlue from "fastify-openapi-glue";
 import { serviceHandlers } from "./handlers";
 
-const PORT = 18080;
+const PORT = Number(process.env.PORT || 18080);
 
 const app = Fastify({ logger: true });
 

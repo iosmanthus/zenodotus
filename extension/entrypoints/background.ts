@@ -48,14 +48,11 @@ export default defineBackground(() => {
     for (const tab of allTabs) {
       // I2: guard against undefined tab.id
       if (tab.id == null) continue;
-      if (tab.groupId !== -1 && tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) {
+      if (tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) {
         if (!groupMap.has(tab.groupId)) {
           groupMap.set(tab.groupId, []);
         }
-        const group = groupMap.get(tab.groupId);
-        if (group) {
-          group.push(tab.id);
-        }
+        groupMap.get(tab.groupId)!.push(tab.id);
       }
     }
 
@@ -72,10 +69,8 @@ export default defineBackground(() => {
   }
 
   async function applyGrouping(result: GroupResponse): Promise<void> {
-    if (!result?.groups) return;
-
     for (const group of result.groups) {
-      if (!group.tabIds?.length) continue;
+      if (!group.tabIds.length) continue;
 
       const validTabIds = [];
       for (const tabId of group.tabIds) {
@@ -173,7 +168,7 @@ export default defineBackground(() => {
     });
     if (!autoGroupEnabled) return;
     if (changeInfo.status !== "complete") return;
-    if (tab.groupId !== -1 && tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) return;
+    if (tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) return;
 
     // S2: add to pending set and reset debounce timer
     pendingTabs.add(tab);
@@ -193,7 +188,10 @@ export default defineBackground(() => {
           await organizeAllTabs();
           sendResponse({ success: true });
         } catch (err) {
-          sendResponse({ success: false, error: err instanceof Error ? err.message : "Unknown error" });
+          sendResponse({
+            success: false,
+            error: err instanceof Error ? err.message : "Unknown error",
+          });
         }
         return;
       }

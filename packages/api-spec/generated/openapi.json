@@ -119,6 +119,10 @@
                   "thinking": {
                     "type": "boolean",
                     "description": "Enable extended thinking"
+                  },
+                  "provider": {
+                    "type": "string",
+                    "description": "LLM provider (claude-code or codex)"
                   }
                 }
               }
@@ -369,6 +373,10 @@
           "thinking": {
             "type": "boolean",
             "description": "Enable extended thinking"
+          },
+          "provider": {
+            "type": "string",
+            "description": "LLM provider (claude-code or codex)"
           }
         }
       },

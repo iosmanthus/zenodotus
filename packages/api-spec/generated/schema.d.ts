@@ -78,6 +78,8 @@ export interface components {
             model?: string;
             /** @description Enable extended thinking */
             thinking?: boolean;
+            /** @description LLM provider (claude-code or codex) */
+            provider?: string;
         };
         GroupAssignment: {
             /** @description ID of an existing group. Omit to create a new group. */

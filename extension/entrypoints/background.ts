@@ -137,7 +137,11 @@ export default defineBackground(() => {
   async function organizeAllTabs(): Promise<void> {
     const allTabs = await chrome.tabs.query({});
     const existingGroups = await getExistingGroups();
-    const { prompt } = await chrome.storage.local.get({ prompt: "" });
+    const { prompt, model, thinking } = await chrome.storage.local.get({
+      prompt: "",
+      model: "",
+      thinking: false,
+    });
     const tabInfoResults = await Promise.all(allTabs.map(collectTabInfo));
     // I2: filter out nulls from collectTabInfo
     const tabInfos = tabInfoResults.filter((t): t is TabInfo => t !== null);
@@ -146,6 +150,8 @@ export default defineBackground(() => {
       tabs: tabInfos,
       existingGroups,
       prompt,
+      model: model || undefined,
+      thinking: thinking || undefined,
     });
 
     if (result) await applyGrouping(result);
@@ -166,7 +172,11 @@ export default defineBackground(() => {
     if (tabs.length === 0) return;
 
     const existingGroups = await getExistingGroups();
-    const { prompt } = await chrome.storage.local.get({ prompt: "" });
+    const { prompt, model, thinking } = await chrome.storage.local.get({
+      prompt: "",
+      model: "",
+      thinking: false,
+    });
     const tabInfoResults = await Promise.all(tabs.map(collectTabInfo));
     const tabInfos = tabInfoResults.filter((t): t is TabInfo => t !== null);
 
@@ -176,6 +186,8 @@ export default defineBackground(() => {
       tabs: tabInfos,
       existingGroups,
       prompt,
+      model: model || undefined,
+      thinking: thinking || undefined,
     });
 
     if (result) await applyGrouping(result);

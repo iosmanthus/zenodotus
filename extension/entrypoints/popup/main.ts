@@ -5,8 +5,10 @@ const statusText = document.getElementById("status-text")!;
 const checkBtn = document.getElementById("check-btn")!;
 const organizeBtn = document.getElementById("organize-btn") as HTMLButtonElement;
 const autoToggle = document.getElementById("auto-toggle") as HTMLInputElement;
+const modelInput = document.getElementById("model-input") as HTMLInputElement;
+const thinkingToggle = document.getElementById("thinking-toggle") as HTMLInputElement;
 const promptInput = document.getElementById("prompt-input") as HTMLTextAreaElement;
-const savePromptBtn = document.getElementById("save-prompt-btn")!;
+const saveSettingsBtn = document.getElementById("save-settings-btn")!;
 const errorMsg = document.getElementById("error-msg")!;
 
 let connected = false;
@@ -54,7 +56,6 @@ organizeBtn.addEventListener("click", () => {
   chrome.runtime.sendMessage({ action: "organize" });
 });
 
-// Listen for status changes from background
 chrome.storage.local.onChanged.addListener((changes) => {
   if (changes.organizeStatus) {
     const status = changes.organizeStatus.newValue;
@@ -84,16 +85,23 @@ chrome.runtime.sendMessage({ action: "getAutoGroup" }).then((response) => {
   if (response) autoToggle.checked = response.autoGroupEnabled;
 });
 
-chrome.storage.local.get({ prompt: "", organizeStatus: null }).then((data) => {
-  promptInput.value = data.prompt;
-  // Restore organizing state if popup reopens mid-organize
-  if (data.organizeStatus === "organizing") {
-    setOrganizing(true);
-  }
-});
+chrome.storage.local
+  .get({ prompt: "", model: "", thinking: false, organizeStatus: null })
+  .then((data) => {
+    promptInput.value = data.prompt;
+    modelInput.value = data.model;
+    thinkingToggle.checked = data.thinking;
+    if (data.organizeStatus === "organizing") {
+      setOrganizing(true);
+    }
+  });
 
-savePromptBtn.addEventListener("click", () => {
-  chrome.storage.local.set({ prompt: promptInput.value });
+saveSettingsBtn.addEventListener("click", () => {
+  chrome.storage.local.set({
+    prompt: promptInput.value,
+    model: modelInput.value,
+    thinking: thinkingToggle.checked,
+  });
 });
 
 checkConnection();

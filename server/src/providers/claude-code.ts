@@ -13,7 +13,7 @@ const SYSTEM_PROMPT = [
   "1. Prefer assigning tabs to existing groups when relevant.",
   "2. Only create new groups when no existing group fits.",
   "3. Keep group names short (2-4 words).",
-  "4. Reuse exact existing group names. Do not create spelling or casing variants (e.g., use 'TiDB Cloud' not 'TiDBCloud').",
+  "4. Reuse exact existing group names. Do not create spelling or casing variants",
   "5. Tabs that do not fit any group should be omitted from the response.",
 ].join("\n");
 
@@ -44,8 +44,8 @@ export async function assignGroups(request: GroupRequest): Promise<GroupResponse
     for await (const event of query({
       prompt: fullPrompt,
       options: {
-        model: "sonnet",
-        thinking: { type: "disabled" },
+        model: request.model || "sonnet",
+        thinking: request.thinking ? { type: "enabled" } : { type: "disabled" },
         maxTurns: 3,
         persistSession: false,
         abortController,

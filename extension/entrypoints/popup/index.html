@@ -21,13 +21,20 @@
       </label>
 
       <details>
-        <summary>Custom Prompt</summary>
+        <summary>Settings</summary>
+        <label class="setting-label">Model</label>
+        <input type="text" id="model-input" placeholder="sonnet" />
+        <label class="setting-row">
+          <input type="checkbox" id="thinking-toggle" />
+          Enable thinking
+        </label>
+        <label class="setting-label">Custom Prompt</label>
         <textarea
           id="prompt-input"
           rows="4"
           placeholder="e.g. Group by project, use English names"
         ></textarea>
-        <button type="button" id="save-prompt-btn">Save</button>
+        <button type="button" id="save-settings-btn">Save</button>
       </details>
     </div>
     <script type="module" src="./main.ts"></script>

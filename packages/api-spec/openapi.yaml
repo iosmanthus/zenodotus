@@ -125,6 +125,12 @@ components:
         prompt:
           type: string
           description: "User's custom grouping strategy prompt"
+        model:
+          type: string
+          description: "LLM model to use (e.g. sonnet, opus, haiku)"
+        thinking:
+          type: boolean
+          description: "Enable extended thinking"
 
     GroupAssignment:
       type: object

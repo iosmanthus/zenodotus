@@ -1,16 +1,9 @@
-import { spec } from "@zenodotus/api-spec";
 import type { components } from "@zenodotus/api-spec/schema";
 
 type GroupRequest = components["schemas"]["GroupRequest"];
 
-const specComponents = (spec as Record<string, unknown>).components as {
-  schemas: Record<string, unknown>;
-};
-
-// OpenAPI schema — used by Claude Code
-export const outputSchema = specComponents.schemas.GroupResponse as Record<string, unknown>;
-
-// OpenAI structured output schema — used by Codex
+// Unified output schema in OpenAI structured output format
+// Claude also accepts this format, so one schema for all providers
 // OpenAI requires: all keys in required, additionalProperties: false, optional via anyOf null
 export const openAIOutputSchema = {
   type: "object",

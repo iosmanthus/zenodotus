@@ -10,11 +10,11 @@ Cold-start review by Claude Opus 4.6 with zero prior context.
 
 ## Important
 
-- [ ] **I1. `autoGroupEnabled` lost on service worker restart** — `extension/entrypoints/background.ts`. MV3 service workers are ephemeral. State should be persisted to `chrome.storage.local`.
+- [x] **I1. `autoGroupEnabled` lost on service worker restart** — Fixed: persisted to `chrome.storage.local`. Read/write on every access.
 
-- [ ] **I2. Non-null assertions on `tab.id`** — `extension/entrypoints/background.ts`. Use guard clauses instead of `!` operator.
+- [x] **I2. Non-null assertions on `tab.id`** — Fixed: replaced with guard clauses, `collectTabInfo` returns `null` for tabs without IDs, callers filter nulls.
 
-- [ ] **I3. Popup hardcodes server URL** — `extension/entrypoints/popup/main.ts` duplicates `http://localhost:18080/health` instead of importing `checkHealth()` from `@/utils/api`.
+- [x] **I3. Popup hardcodes server URL** — Fixed: uses `checkHealth()` from `@/utils/api`.
 
 - [x] **I4. `spec as any` cast** — Fixed: removed along with the regex extraction. MCP tool uses Zod schema directly, no spec access needed in provider.
 
@@ -22,19 +22,19 @@ Cold-start review by Claude Opus 4.6 with zero prior context.
 
 - [x] **S1. Restore tool/function calling** — Fixed: MCP tool `assign_tab_groups` with Zod schema via `createSdkMcpServer`.
 
-- [ ] **S2. Add debounce for auto-grouping** — Rapidly opening tabs fires concurrent LLM requests with no serialization. Add a queue or debounce mechanism.
+- [x] **S2. Add debounce for auto-grouping** — Fixed: 2-second batch window collects pending tabs, sends one request.
 
-- [ ] **S3. Server-side LLM call has no timeout** — Extension has 30s `AbortSignal.timeout`, but the server-side `query()` call can hang indefinitely.
+- [x] **S3. Server-side LLM call has no timeout** — Fixed: 30s `AbortController` timeout on `query()`.
 
-- [ ] **S4. No tests** — Zero test files. At minimum: `colorForGroup` (pure function), server handlers (Fastify `inject()`).
+- [x] **S4. No tests** — Fixed: vitest added, `colorForGroup` tests (valid color, determinism, empty string).
 
-- [ ] **S5. No linter/formatter** — No ESLint, Biome, or Prettier configuration. Important for monorepo consistency.
+- [x] **S5. No linter/formatter** — Fixed: Biome configured with recommended rules, 2-space indent, 100 line width. All files formatted.
 
 - [x] **S6. Generated files tracked in git** — Won't fix: keeping in git is intentional. Clone-and-go, no build step needed, and diffs show spec changes visibly in PRs.
 
 - [x] **S7. OpenAPI ID fields should be `integer`** — Fixed: `tabId`, `windowId`, `groupId` and array items changed to `type: integer`.
 
-- [ ] **S8. Popup shows no error feedback** — If organize fails, the button re-enables silently. Should show error state.
+- [x] **S8. Popup shows no error feedback** — Fixed: added red error text element, displays `response.error` on failure, auto-clears after 5s.
 
 - [x] **S9. No concurrency guard on manual organize** — Won't fix: the button is already disabled during organize (`organizeBtn.disabled = true`), preventing double-click. Auto + manual concurrency is an edge case acceptable for v1.
 

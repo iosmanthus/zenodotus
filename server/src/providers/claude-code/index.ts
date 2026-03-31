@@ -1,6 +1,9 @@
-import { query } from "@anthropic-ai/claude-agent-sdk";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import type { components } from "@zenodotus/api-spec/schema";
 import { buildFullPrompt, outputSchema } from "../prompt";
+
+const execFileAsync = promisify(execFile);
 
 type GroupRequest = components["schemas"]["GroupRequest"];
 type GroupResponse = components["schemas"]["GroupResponse"];
@@ -8,34 +11,28 @@ type GroupResponse = components["schemas"]["GroupResponse"];
 export async function assignGroups(request: GroupRequest): Promise<GroupResponse | null> {
   const fullPrompt = buildFullPrompt(request);
 
-  const abortController = new AbortController();
-  const timeout = setTimeout(() => abortController.abort(), 30000);
+  const args = [
+    "--print",
+    "--no-session-persistence",
+    "--output-format",
+    "json",
+    "--json-schema",
+    JSON.stringify(outputSchema),
+  ];
+
+  args.push("--model", request.model || "sonnet");
+
+  args.push("-p", fullPrompt);
 
   try {
-    for await (const event of query({
-      prompt: fullPrompt,
-      options: {
-        model: request.model || "sonnet",
-        thinking: request.thinking ? { type: "enabled" } : { type: "disabled" },
-        maxTurns: 3,
-        persistSession: false,
-        abortController,
-        outputFormat: {
-          type: "json_schema",
-          schema: outputSchema,
-        },
-      },
-    })) {
-      if (event.type === "result" && event.subtype === "success") {
-        const output = (event as Record<string, unknown>).structured_output;
-        if (output) {
-          return output as GroupResponse;
-        }
-      }
+    const { stdout } = await execFileAsync("claude", args, { timeout: 60000 });
+    const parsed = JSON.parse(stdout);
+    if (parsed.structured_output) {
+      return parsed.structured_output as GroupResponse;
     }
-  } finally {
-    clearTimeout(timeout);
+    return null;
+  } catch (err) {
+    console.error("[claude-code] error:", err);
+    return null;
   }
-
-  return null;
 }

@@ -209,9 +209,7 @@ export default defineBackground(() => {
     if (msg.action === "getAutoGroup") {
       chrome.storage.local
         .get({ autoGroupEnabled: false })
-        .then((data) =>
-          sendResponse({ autoGroupEnabled: data.autoGroupEnabled as boolean }),
-        )
+        .then((data) => sendResponse({ autoGroupEnabled: data.autoGroupEnabled as boolean }))
         .catch(() => sendResponse({ autoGroupEnabled: false }));
       return true;
     }

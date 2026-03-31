@@ -20,6 +20,9 @@ importers:
       '@zenodotus/api-spec':
         specifier: workspace:*
         version: link:../packages/api-spec
+      chrome-types:
+        specifier: ^0.1.425
+        version: 0.1.425
       typescript:
         specifier: ^5.8.0
         version: 5.9.3
@@ -940,6 +943,9 @@ packages:
     resolution: {integrity: sha512-JbuGuBNss258bvGil7FT4HKdC3SC2K7UAEUqiPy3ACS3Yxo3hAW6bvFpCu2HsIJLgTqxgEX6BkujvzZfLpUD0Q==}
     engines: {node: '>=12.13.0'}
     hasBin: true
+
+  chrome-types@0.1.425:
+    resolution: {integrity: sha512-uc1Mc4EGLUeZ1O6ZeQwezCLBrwbBxsPeCu9V7E+8+YHudg6RecgWtzG7L2m+ZW+3ahayhFDq0BwjM2aFujxdyw==}
 
   ci-info@4.4.0:
     resolution: {integrity: sha512-77PSwercCZU2Fc4sX94eF8k8Pxte6JAwL4/ICZLFjJLqegs7kCuAsqqj/70NQF6TvDpgFjkubQB2FW2ZZddvQg==}
@@ -3347,6 +3353,8 @@ snapshots:
       lighthouse-logger: 2.0.2
     transitivePeerDependencies:
       - supports-color
+
+  chrome-types@0.1.425: {}
 
   ci-info@4.4.0: {}
 

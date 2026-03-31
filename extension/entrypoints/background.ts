@@ -71,16 +71,22 @@ export default defineBackground(() => {
     return groups;
   }
 
+  // Normalize group name for fuzzy matching: lowercase + strip whitespace
+  function normalizeName(name: string): string {
+    return name.toLowerCase().replace(/\s+/g, "");
+  }
+
   async function applyGrouping(result: GroupResponse): Promise<void> {
-    // Build name → groupId map from existing groups to avoid duplicates
-    const nameToGroupId = new Map<string, number>();
+    // Build normalized name → { groupId, originalName } map from existing groups
+    const nameToGroup = new Map<string, { groupId: number; name: string }>();
     const allTabs = await chrome.tabs.query({});
     for (const tab of allTabs) {
       if (tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) {
         try {
           const g = await chrome.tabGroups.get(tab.groupId);
-          if (g.title && !nameToGroupId.has(g.title)) {
-            nameToGroupId.set(g.title, tab.groupId);
+          const key = normalizeName(g.title || "");
+          if (key && !nameToGroup.has(key)) {
+            nameToGroup.set(key, { groupId: tab.groupId, name: g.title || "" });
           }
         } catch {
           // group removed
@@ -104,17 +110,16 @@ export default defineBackground(() => {
       if (first == null) continue;
       const tabIds: NonEmptyArray<number> = [first, ...rest];
 
-      // Resolve target groupId: explicit > name match > create new
-      let targetGroupId = group.groupId ?? (group.name ? nameToGroupId.get(group.name) : undefined);
+      // Resolve target groupId: explicit > fuzzy name match > create new
+      const match = group.name ? nameToGroup.get(normalizeName(group.name)) : undefined;
+      let targetGroupId = group.groupId ?? match?.groupId;
 
       if (targetGroupId != null) {
         try {
           await chrome.tabs.group({ tabIds, groupId: targetGroupId });
-          if (group.name) {
-            await chrome.tabGroups.update(targetGroupId, { title: group.name });
-          }
+          // Keep the original name, don't rename to LLM's variant
         } catch {
-          targetGroupId = undefined; // group gone, fall through to create
+          targetGroupId = undefined;
         }
       }
 
@@ -124,7 +129,7 @@ export default defineBackground(() => {
           title: group.name,
           color: colorForGroup(group.name),
         });
-        nameToGroupId.set(group.name, newGroupId);
+        nameToGroup.set(normalizeName(group.name), { groupId: newGroupId, name: group.name });
       }
     }
   }

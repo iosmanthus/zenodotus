@@ -13,7 +13,8 @@ const SYSTEM_PROMPT = [
   "1. Prefer assigning tabs to existing groups when relevant.",
   "2. Only create new groups when no existing group fits.",
   "3. Keep group names short (2-4 words).",
-  "4. Tabs that do not fit any group should be omitted from the response.",
+  "4. Reuse exact existing group names. Do not create spelling or casing variants (e.g., use 'TiDB Cloud' not 'TiDBCloud').",
+  "5. Tabs that do not fit any group should be omitted from the response.",
 ].join("\n");
 
 const outputSchema = (spec as Record<string, unknown>).components as {

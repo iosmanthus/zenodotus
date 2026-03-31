@@ -90,7 +90,7 @@ export default defineBackground(() => {
       if (group.groupId != null) {
         try {
           await chrome.tabs.group({
-            tabIds: validTabIds,
+            tabIds: validTabIds as [number, ...number[]],
             groupId: group.groupId,
           });
           if (group.name) {
@@ -111,7 +111,7 @@ export default defineBackground(() => {
 
   async function createNewGroup(name: string, tabIds: number[]): Promise<void> {
     try {
-      const groupId = await chrome.tabs.group({ tabIds });
+      const groupId = await chrome.tabs.group({ tabIds: tabIds as [number, ...number[]] });
       await chrome.tabGroups.update(groupId, {
         title: name,
         color: colorForGroup(name),
@@ -209,8 +209,8 @@ export default defineBackground(() => {
     if (msg.action === "getAutoGroup") {
       chrome.storage.local
         .get({ autoGroupEnabled: false })
-        .then((data: { autoGroupEnabled: boolean }) =>
-          sendResponse({ autoGroupEnabled: data.autoGroupEnabled }),
+        .then((data) =>
+          sendResponse({ autoGroupEnabled: data.autoGroupEnabled as boolean }),
         )
         .catch(() => sendResponse({ autoGroupEnabled: false }));
       return true;

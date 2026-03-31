@@ -12,7 +12,6 @@ const errorMsg = document.getElementById("error-msg")!;
 let connected = false;
 let errorClearTimer: ReturnType<typeof setTimeout> | null = null;
 
-// I3: use checkHealth() from utils/api
 async function checkConnection(): Promise<void> {
   statusDot.className = "";
   statusText.textContent = "Checking...";
@@ -30,7 +29,6 @@ async function checkConnection(): Promise<void> {
   }
 }
 
-// S8: show error in the error element, auto-clear after 5s
 function showError(message: string): void {
   errorMsg.textContent = message;
   if (errorClearTimer != null) {
@@ -48,22 +46,20 @@ organizeBtn.addEventListener("click", async () => {
   organizeBtn.disabled = true;
   organizeBtn.classList.add("loading");
   organizeBtn.textContent = "Organizing...";
-  // S8: clear error before organizing
   errorMsg.textContent = "";
 
-  chrome.runtime.sendMessage(
-    { action: "organize" },
-    (response: { success: boolean; error?: string }) => {
-      organizeBtn.disabled = false;
-      organizeBtn.classList.remove("loading");
-      organizeBtn.textContent = "Organize Tabs";
-
-      // S8: check response.success and show error if failed
-      if (response && response.success === false && response.error) {
-        showError(response.error);
-      }
-    },
-  );
+  try {
+    const response = await chrome.runtime.sendMessage({ action: "organize" });
+    if (response?.success === false && response.error) {
+      showError(response.error);
+    }
+  } catch (err) {
+    showError(err instanceof Error ? err.message : "Unknown error");
+  } finally {
+    organizeBtn.disabled = false;
+    organizeBtn.classList.remove("loading");
+    organizeBtn.textContent = "Organize Tabs";
+  }
 });
 
 autoToggle.addEventListener("change", () => {
@@ -73,14 +69,11 @@ autoToggle.addEventListener("change", () => {
   });
 });
 
-chrome.runtime.sendMessage(
-  { action: "getAutoGroup" },
-  (response: { autoGroupEnabled: boolean }) => {
-    if (response) autoToggle.checked = response.autoGroupEnabled;
-  },
-);
+chrome.runtime.sendMessage({ action: "getAutoGroup" }).then((response) => {
+  if (response) autoToggle.checked = response.autoGroupEnabled;
+});
 
-chrome.storage.local.get({ prompt: "" }, (data: { prompt: string }) => {
+chrome.storage.local.get({ prompt: "" }).then((data) => {
   promptInput.value = data.prompt;
 });
 

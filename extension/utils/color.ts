@@ -1,4 +1,4 @@
-const COLORS: chrome.tabGroups.ColorEnum[] = [
+const COLORS: chrome.tabGroups.Color[] = [
   "grey",
   "blue",
   "red",
@@ -18,6 +18,6 @@ function hashString(str: string): number {
   return Math.abs(hash);
 }
 
-export function colorForGroup(name: string): chrome.tabGroups.ColorEnum {
+export function colorForGroup(name: string): chrome.tabGroups.Color {
   return COLORS[hashString(name) % COLORS.length];
 }

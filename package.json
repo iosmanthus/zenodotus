@@ -1,6 +1,7 @@
 {
   "name": "zenodotus",
   "private": true,
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "generate": "pnpm --filter @zenodotus/api-spec generate",
     "dev:server": "pnpm --filter @zenodotus/server dev",

@@ -182,31 +182,33 @@ export default defineBackground(() => {
 
   // Message handling from popup
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    (async () => {
-      if (msg.action === "organize") {
-        try {
-          await organizeAllTabs();
-          sendResponse({ success: true });
-        } catch (err) {
-          sendResponse({
-            success: false,
-            error: err instanceof Error ? err.message : "Unknown error",
-          });
-        }
-        return;
-      }
+    if (msg.action === "organize") {
+      // Fire and forget — don't block on sendResponse
+      chrome.storage.local.set({ organizeStatus: "organizing" });
+      organizeAllTabs()
+        .then(() => chrome.storage.local.set({ organizeStatus: "done" }))
+        .catch((err) =>
+          chrome.storage.local.set({
+            organizeStatus: "error",
+            organizeError: err instanceof Error ? err.message : "Unknown error",
+          }),
+        );
+      sendResponse({ success: true });
+      return false;
+    }
 
-      if (msg.action === "setAutoGroup") {
-        await chrome.storage.local.set({ autoGroupEnabled: msg.enabled });
-        sendResponse({ success: true, autoGroupEnabled: msg.enabled });
-        return;
-      }
+    if (msg.action === "setAutoGroup") {
+      chrome.storage.local.set({ autoGroupEnabled: msg.enabled });
+      sendResponse({ success: true });
+      return false;
+    }
 
-      if (msg.action === "getAutoGroup") {
+    if (msg.action === "getAutoGroup") {
+      (async () => {
         const data = await chrome.storage.local.get({ autoGroupEnabled: false });
         sendResponse({ autoGroupEnabled: data.autoGroupEnabled as boolean });
-      }
-    })();
-    return true;
+      })();
+      return true;
+    }
   });
 });

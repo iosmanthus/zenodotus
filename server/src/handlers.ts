@@ -10,7 +10,10 @@ export const serviceHandlers = {
   },
 
   async groupTabs(req: FastifyRequest<{ Body: GroupRequest }>, reply: FastifyReply) {
-    req.log.info({ tabs: req.body.tabs.length, existingGroups: req.body.existingGroups?.length ?? 0 }, "groupTabs request");
+    req.log.info(
+      { tabs: req.body.tabs.length, existingGroups: req.body.existingGroups?.length ?? 0 },
+      "groupTabs request",
+    );
 
     const result = await assignGroups(req.body);
 

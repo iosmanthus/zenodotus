@@ -40,25 +40,36 @@ function showError(message: string): void {
   }, 5000);
 }
 
+function setOrganizing(active: boolean): void {
+  organizeBtn.disabled = active;
+  organizeBtn.classList.toggle("loading", active);
+  organizeBtn.textContent = active ? "Organizing..." : "Organize Tabs";
+}
+
 checkBtn.addEventListener("click", checkConnection);
 
-organizeBtn.addEventListener("click", async () => {
-  organizeBtn.disabled = true;
-  organizeBtn.classList.add("loading");
-  organizeBtn.textContent = "Organizing...";
+organizeBtn.addEventListener("click", () => {
+  setOrganizing(true);
   errorMsg.textContent = "";
+  chrome.runtime.sendMessage({ action: "organize" });
+});
 
-  try {
-    const response = await chrome.runtime.sendMessage({ action: "organize" });
-    if (response?.success === false && response.error) {
-      showError(response.error);
+// Listen for status changes from background
+chrome.storage.local.onChanged.addListener((changes) => {
+  if (changes.organizeStatus) {
+    const status = changes.organizeStatus.newValue;
+    if (status === "done") {
+      setOrganizing(false);
+      chrome.storage.local.remove(["organizeStatus", "organizeError"]);
+    } else if (status === "error") {
+      setOrganizing(false);
+      chrome.storage.local.get({ organizeError: "" }).then((data) => {
+        showError(data.organizeError || "Unknown error");
+        chrome.storage.local.remove(["organizeStatus", "organizeError"]);
+      });
+    } else if (status === "organizing") {
+      setOrganizing(true);
     }
-  } catch (err) {
-    showError(err instanceof Error ? err.message : "Unknown error");
-  } finally {
-    organizeBtn.disabled = false;
-    organizeBtn.classList.remove("loading");
-    organizeBtn.textContent = "Organize Tabs";
   }
 });
 
@@ -73,8 +84,12 @@ chrome.runtime.sendMessage({ action: "getAutoGroup" }).then((response) => {
   if (response) autoToggle.checked = response.autoGroupEnabled;
 });
 
-chrome.storage.local.get({ prompt: "" }).then((data) => {
+chrome.storage.local.get({ prompt: "", organizeStatus: null }).then((data) => {
   promptInput.value = data.prompt;
+  // Restore organizing state if popup reopens mid-organize
+  if (data.organizeStatus === "organizing") {
+    setOrganizing(true);
+  }
 });
 
 savePromptBtn.addEventListener("click", () => {

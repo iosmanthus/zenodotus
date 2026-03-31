@@ -72,6 +72,22 @@ export default defineBackground(() => {
   }
 
   async function applyGrouping(result: GroupResponse): Promise<void> {
+    // Build name → groupId map from existing groups to avoid duplicates
+    const nameToGroupId = new Map<string, number>();
+    const allTabs = await chrome.tabs.query({});
+    for (const tab of allTabs) {
+      if (tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) {
+        try {
+          const g = await chrome.tabGroups.get(tab.groupId);
+          if (g.title && !nameToGroupId.has(g.title)) {
+            nameToGroupId.set(g.title, tab.groupId);
+          }
+        } catch {
+          // group removed
+        }
+      }
+    }
+
     for (const group of result.groups) {
       if (!group.tabIds.length) continue;
 
@@ -88,37 +104,28 @@ export default defineBackground(() => {
       if (first == null) continue;
       const tabIds: NonEmptyArray<number> = [first, ...rest];
 
-      if (group.groupId != null) {
+      // Resolve target groupId: explicit > name match > create new
+      let targetGroupId = group.groupId ?? (group.name ? nameToGroupId.get(group.name) : undefined);
+
+      if (targetGroupId != null) {
         try {
-          await chrome.tabs.group({
-            tabIds,
-            groupId: group.groupId,
-          });
+          await chrome.tabs.group({ tabIds, groupId: targetGroupId });
           if (group.name) {
-            await chrome.tabGroups.update(group.groupId, {
-              title: group.name,
-            });
+            await chrome.tabGroups.update(targetGroupId, { title: group.name });
           }
         } catch {
-          if (group.name) {
-            await createNewGroup(group.name, tabIds);
-          }
+          targetGroupId = undefined; // group gone, fall through to create
         }
-      } else if (group.name) {
-        await createNewGroup(group.name, tabIds);
       }
-    }
-  }
 
-  async function createNewGroup(name: string, tabIds: NonEmptyArray<number>): Promise<void> {
-    try {
-      const groupId = await chrome.tabs.group({ tabIds });
-      await chrome.tabGroups.update(groupId, {
-        title: name,
-        color: colorForGroup(name),
-      });
-    } catch (err) {
-      console.error("Failed to create group:", err);
+      if (targetGroupId == null && group.name) {
+        const newGroupId = await chrome.tabs.group({ tabIds });
+        await chrome.tabGroups.update(newGroupId, {
+          title: group.name,
+          color: colorForGroup(group.name),
+        });
+        nameToGroupId.set(group.name, newGroupId);
+      }
     }
   }
 

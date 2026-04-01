@@ -6,13 +6,7 @@
   </head>
   <body>
     <div id="app">
-      <div id="status-bar">
-        <span id="status-dot"></span>
-        <span id="status-text">Checking...</span>
-        <button type="button" id="check-btn" title="Check connection">&#x21bb;</button>
-      </div>
-
-      <button type="button" id="organize-btn" disabled>Organize Tabs</button>
+      <button type="button" id="organize-btn">Organize Tabs</button>
       <p id="error-msg"></p>
 
       <label>
@@ -22,8 +16,6 @@
 
       <details>
         <summary>Settings</summary>
-        <label class="setting-label">Server URL</label>
-        <input type="text" id="server-url-input" placeholder="http://localhost:18080" />
         <label class="setting-label">Provider</label>
         <input type="text" id="provider-input" placeholder="claude-code" />
         <label class="setting-label">Model</label>

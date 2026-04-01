@@ -17,41 +17,6 @@ body {
   gap: 10px;
 }
 
-#status-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-#status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #ccc;
-}
-
-#status-dot.connected {
-  background: #22c55e;
-}
-
-#status-dot.disconnected {
-  background: #ef4444;
-}
-
-#status-text {
-  flex: 1;
-  color: #666;
-}
-
-#check-btn {
-  background: none;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-  padding: 2px 6px;
-  font-size: 14px;
-}
-
 #organize-btn {
   padding: 8px 12px;
   background: #2563eb;
@@ -108,16 +73,6 @@ summary {
   gap: 6px;
   margin-top: 6px;
   color: #333;
-}
-
-#server-url-input {
-  width: 100%;
-  margin-top: 4px;
-  padding: 6px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-family: inherit;
-  font-size: 12px;
 }
 
 #provider-input {

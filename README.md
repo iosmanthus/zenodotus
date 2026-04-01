@@ -4,10 +4,12 @@ Intelligent browser tab grouping powered by your local coding agent (Claude Code
 
 ## How It Works
 
-Zenodotus collects your open tabs (URL, title, meta description), sends them to a local server which calls your coding agent, and applies the returned grouping to your browser. Groups are color-coded by name.
+Zenodotus collects your open tabs (URL, title, meta description), sends them to a native messaging host which calls your coding agent, and applies the returned grouping to your browser. Groups are color-coded by name.
+
+The server communicates with the extension via Chrome Native Messaging -- no HTTP server or open ports required.
 
 ```
-Chrome Extension  -->  Local Server (:18080)  -->  Claude Code or Codex (via subscription)
+Chrome Extension  <--native messaging-->  Zenodotus Server  -->  Claude Code or Codex (via subscription)
 ```
 
 ## Prerequisites
@@ -29,29 +31,16 @@ pnpm install
 
 # Generate types from OpenAPI spec (already committed, but run after spec changes)
 pnpm generate
+
+# Build the native messaging host
+pnpm build:server
+
+# Install the native messaging host manifest for your browser
+ZENODOTUS_BROWSER=brave pnpm install:nmh
+# Supported values: chrome, brave, chromium
 ```
 
-## Running
-
-### 1. Start the server
-
-```bash
-pnpm dev:server
-```
-
-The server listens on `http://localhost:18080` by default. To use a different port:
-
-```bash
-PORT=9090 pnpm dev:server
-```
-
-To use Codex as the default provider:
-
-```bash
-PROVIDER=codex pnpm dev:server
-```
-
-### 2. Load the extension
+## Loading the Extension
 
 ```bash
 pnpm build:extension
@@ -68,11 +57,7 @@ Or download the latest release from [GitHub Releases](https://github.com/iosmant
 
 ## Usage
 
-Click the Zenodotus extension icon to open the popup.
-
-### Organize Tabs
-
-Click **Organize Tabs** to group all open tabs across all windows. The agent analyzes each tab and assigns it to a group. Existing groups are preserved and reused.
+Click the Zenodotus extension icon to open the popup, then click **Organize Tabs** to group all open tabs across all windows. The agent analyzes each tab and assigns it to a group. Existing groups are preserved and reused.
 
 ### Auto-group
 
@@ -82,7 +67,6 @@ Toggle **Auto-group new tabs** to automatically group new tabs when they finish 
 
 Expand **Settings** to configure:
 
-- **Server URL** -- Backend address. Default: `http://localhost:18080`
 - **Provider** -- `claude-code` (default) or `codex`
 - **Model** -- Model name. Default: `sonnet` for Claude Code. Leave empty for Codex default.
 - **Enable thinking** -- Turn on extended thinking for more deliberate grouping. Off by default for speed.

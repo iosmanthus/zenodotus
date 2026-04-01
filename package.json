@@ -4,7 +4,8 @@
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "generate": "pnpm --filter @zenodotus/api-spec generate",
-    "dev:server": "pnpm --filter @zenodotus/server dev",
+    "build:server": "pnpm --filter @zenodotus/server build",
+    "install:nmh": "./scripts/install-nmh.sh",
     "dev:extension": "pnpm --filter @zenodotus/extension dev",
     "build:extension": "pnpm --filter @zenodotus/extension build",
     "lint": "biome check .",

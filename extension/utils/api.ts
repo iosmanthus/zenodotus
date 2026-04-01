@@ -5,18 +5,6 @@ type GroupResponse = components["schemas"]["GroupResponse"];
 
 const NMH_HOST = "com.zenodotus.host";
 
-export async function checkHealth(): Promise<boolean> {
-  try {
-    const response = await chrome.runtime.sendNativeMessage(NMH_HOST, {
-      tabs: [],
-    });
-    // If we get any response (even an error), the host is reachable
-    return response != null;
-  } catch {
-    return false;
-  }
-}
-
 export async function requestGrouping(request: GroupRequest): Promise<GroupResponse | null> {
   try {
     const response = await chrome.runtime.sendNativeMessage(NMH_HOST, request);

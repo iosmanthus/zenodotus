@@ -90,4 +90,7 @@ async function main(): Promise<void> {
 
 main()
   .then(() => process.exit(0))
-  .catch(() => process.exit(1));
+  .catch((err) => {
+    process.stderr.write(String(err) + "\n");
+    process.exit(1);
+  });

@@ -11,6 +11,9 @@
     "format": "biome check --write .",
     "test": "vitest run"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  },
   "devDependencies": {
     "@biomejs/biome": "^2.4.10",
     "vitest": "^4.1.2"

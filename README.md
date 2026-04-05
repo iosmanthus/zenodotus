@@ -33,12 +33,6 @@ curl -fsSL https://raw.githubusercontent.com/iosmanthus/zenodotus/master/install
 curl -fsSL https://raw.githubusercontent.com/iosmanthus/zenodotus/master/install.sh | bash -s -- --browser chromium
 ```
 
-Or download `install.sh` and run it manually:
-
-```bash
-./install.sh --browser brave --extension-id <your-extension-id>
-```
-
 Run `./install.sh --help` for all options.
 
 ### 2. Install the extension

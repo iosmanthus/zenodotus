@@ -6,7 +6,6 @@ HOST_NAME="com.zenodotus.host"
 
 # Defaults
 BROWSER="${ZENODOTUS_BROWSER:-chrome}"
-EXTENSION_ID="${ZENODOTUS_EXTENSION_ID:-bgdonkmponooglmcffnobdbnlchgmlcg}"
 INSTALL_DIR=""
 VERSION="latest"
 LOCAL=false
@@ -21,14 +20,12 @@ Options:
   --browser <chrome|chromium|brave>   Target browser (default: chrome)
   --install-dir <path>                Override install directory
                                       (default: \$XDG_DATA_HOME/zenodotus)
-  --extension-id <id>                 Restrict to a specific extension ID
   --version <tag>                     Release version to install (default: latest)
   --local                             Use local build (server/dist/server.mjs)
   -h, --help                          Show this help
 
 Environment variables:
   ZENODOTUS_BROWSER        Same as --browser
-  ZENODOTUS_EXTENSION_ID   Same as --extension-id
   XDG_DATA_HOME            Base data directory (default: ~/.local/share)
 
 Examples:
@@ -51,7 +48,6 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --browser)      BROWSER="$2"; shift 2 ;;
     --install-dir)  INSTALL_DIR="$2"; shift 2 ;;
-    --extension-id) EXTENSION_ID="$2"; shift 2 ;;
     --version)      VERSION="$2"; shift 2 ;;
     --local)        LOCAL=true; shift ;;
     -h|--help)      usage ;;
@@ -138,11 +134,7 @@ case "$OS" in
 esac
 
 # --- Write NMH manifest ---
-if [[ -n "$EXTENSION_ID" ]]; then
-  ALLOWED_ORIGINS="[\"chrome-extension://$EXTENSION_ID/\"]"
-else
-  ALLOWED_ORIGINS='["chrome-extension://*/"]'
-fi
+EXTENSION_ID="bgdonkmponooglmcffnobdbnlchgmlcg"
 
 mkdir -p "$MANIFEST_DIR"
 MANIFEST_PATH="$MANIFEST_DIR/$HOST_NAME.json"
@@ -153,7 +145,7 @@ cat > "$MANIFEST_PATH" <<EOF
   "description": "Zenodotus native messaging host for LLM-powered tab grouping",
   "path": "$WRAPPER",
   "type": "stdio",
-  "allowed_origins": $ALLOWED_ORIGINS
+  "allowed_origins": ["chrome-extension://$EXTENSION_ID/"]
 }
 EOF
 

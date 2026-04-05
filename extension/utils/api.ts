@@ -1,41 +1,17 @@
-import type { components } from "@zenodotus/api-spec/schema";
+import type { GroupRequest, GroupResponse } from "@zenodotus/api-spec";
 
-type GroupRequest = components["schemas"]["GroupRequest"];
-type GroupResponse = components["schemas"]["GroupResponse"];
-
-const DEFAULT_SERVER_URL = "http://localhost:18080";
-
-async function getServerUrl(): Promise<string> {
-  const { serverUrl } = await chrome.storage.local.get({ serverUrl: DEFAULT_SERVER_URL });
-  return serverUrl || DEFAULT_SERVER_URL;
-}
-
-export async function checkHealth(): Promise<boolean> {
-  try {
-    const url = await getServerUrl();
-    const res = await fetch(`${url}/health`, {
-      signal: AbortSignal.timeout(3000),
-    });
-    const data = await res.json();
-    return data.ok === true;
-  } catch {
-    return false;
-  }
-}
+const NMH_HOST = "com.zenodotus.host";
 
 export async function requestGrouping(request: GroupRequest): Promise<GroupResponse | null> {
   try {
-    const url = await getServerUrl();
-    const res = await fetch(`${url}/group`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(request),
-      signal: AbortSignal.timeout(30000),
-    });
-
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
+    const response = await chrome.runtime.sendNativeMessage(NMH_HOST, request);
+    if (response?.error) {
+      console.error("[zenodotus] NMH error:", response.error);
+      return null;
+    }
+    return response as GroupResponse;
+  } catch (err) {
+    console.error("[zenodotus] NMH communication error:", err);
     return null;
   }
 }

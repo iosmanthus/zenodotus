@@ -4,17 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./openapi.yaml": "./openapi.yaml",
-    "./schema": "./generated/schema.d.ts",
     ".": "./src/index.ts"
   },
-  "scripts": {
-    "generate": "tsx scripts/generate.ts && openapi-typescript openapi.yaml -o generated/schema.d.ts"
-  },
   "devDependencies": {
-    "@apidevtools/swagger-parser": "^10.1.1",
-    "openapi-typescript": "^7.0.0",
-    "tsx": "^4.21.0",
     "typescript": "^5.8.0"
   }
 }

@@ -1,3 +1,7 @@
-import spec from "../generated/openapi.json" with { type: "json" };
-
-export { spec };
+export type {
+  TabInfo,
+  ExistingGroup,
+  GroupRequest,
+  GroupAssignment,
+  GroupResponse,
+} from "./types.js";

@@ -1,11 +1,5 @@
-import { checkHealth } from "@/utils/api";
-
-const statusDot = document.getElementById("status-dot")!;
-const statusText = document.getElementById("status-text")!;
-const checkBtn = document.getElementById("check-btn")!;
 const organizeBtn = document.getElementById("organize-btn") as HTMLButtonElement;
 const autoToggle = document.getElementById("auto-toggle") as HTMLInputElement;
-const serverUrlInput = document.getElementById("server-url-input") as HTMLInputElement;
 const providerInput = document.getElementById("provider-input") as HTMLInputElement;
 const modelInput = document.getElementById("model-input") as HTMLInputElement;
 const thinkingToggle = document.getElementById("thinking-toggle") as HTMLInputElement;
@@ -13,25 +7,7 @@ const promptInput = document.getElementById("prompt-input") as HTMLTextAreaEleme
 const saveSettingsBtn = document.getElementById("save-settings-btn")!;
 const errorMsg = document.getElementById("error-msg")!;
 
-let connected = false;
 let errorClearTimer: ReturnType<typeof setTimeout> | null = null;
-
-async function checkConnection(): Promise<void> {
-  statusDot.className = "";
-  statusText.textContent = "Checking...";
-
-  connected = await checkHealth();
-
-  if (connected) {
-    statusDot.className = "connected";
-    statusText.textContent = "Connected";
-    organizeBtn.disabled = false;
-  } else {
-    statusDot.className = "disconnected";
-    statusText.textContent = "Service disconnected";
-    organizeBtn.disabled = true;
-  }
-}
 
 function showError(message: string): void {
   errorMsg.textContent = message;
@@ -50,12 +26,11 @@ function setOrganizing(active: boolean): void {
   organizeBtn.textContent = active ? "Organizing..." : "Organize Tabs";
 }
 
-checkBtn.addEventListener("click", checkConnection);
-
-organizeBtn.addEventListener("click", () => {
+organizeBtn.addEventListener("click", async () => {
   setOrganizing(true);
   errorMsg.textContent = "";
-  chrome.runtime.sendMessage({ action: "organize" });
+  const currentWindow = await chrome.windows.getCurrent();
+  chrome.runtime.sendMessage({ action: "organize", windowId: currentWindow.id });
 });
 
 chrome.storage.local.onChanged.addListener((changes) => {
@@ -92,14 +67,12 @@ chrome.storage.local
     prompt: "",
     model: "",
     thinking: false,
-    serverUrl: "",
     provider: "",
     organizeStatus: null,
   })
   .then((data) => {
     promptInput.value = data.prompt;
     modelInput.value = data.model;
-    serverUrlInput.value = data.serverUrl;
     providerInput.value = data.provider;
     thinkingToggle.checked = data.thinking;
     if (data.organizeStatus === "organizing") {
@@ -112,9 +85,6 @@ saveSettingsBtn.addEventListener("click", () => {
     prompt: promptInput.value,
     model: modelInput.value,
     thinking: thinkingToggle.checked,
-    serverUrl: serverUrlInput.value,
     provider: providerInput.value,
   });
 });
-
-checkConnection();

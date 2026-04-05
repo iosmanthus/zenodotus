@@ -4,88 +4,78 @@ Intelligent browser tab grouping powered by your local coding agent (Claude Code
 
 ## How It Works
 
-Zenodotus collects your open tabs (URL, title, meta description), sends them to a local server which calls your coding agent, and applies the returned grouping to your browser. Groups are color-coded by name.
+Zenodotus collects your open tabs (URL, title, meta description), sends them to a native messaging host which calls your coding agent, and applies the returned grouping to your browser. Groups are color-coded by name.
+
+No HTTP server or open ports required -- communication happens via Chrome Native Messaging.
 
 ```
-Chrome Extension  -->  Local Server (:18080)  -->  Claude Code or Codex (via subscription)
+Chrome Extension  <--native messaging-->  Zenodotus NMH  -->  Claude Code or Codex
 ```
 
 ## Prerequisites
 
 - [Claude Code](https://claude.com/product/claude-code) or [Codex](https://github.com/openai/codex) CLI installed and logged in
-- Chromium-based browser (Chrome, Brave, Edge, etc.)
+- Chromium-based browser (Chrome, Brave, Chromium)
+- Node.js (or Nix -- the installer handles both)
 
-## Setup
+## Install
 
-```bash
-git clone <repo-url> && cd zenodotus
-
-# Enter dev shell if using Nix:
-nix develop
-# Or use direnv: direnv allow
-
-# Install dependencies
-pnpm install
-
-# Generate types from OpenAPI spec (already committed, but run after spec changes)
-pnpm generate
-```
-
-## Running
-
-### 1. Start the server
+### 1. Install the native messaging host
 
 ```bash
-pnpm dev:server
+# Chrome (default)
+curl -fsSL https://raw.githubusercontent.com/iosmanthus/zenodotus/master/install.sh | bash
+
+# Brave
+curl -fsSL https://raw.githubusercontent.com/iosmanthus/zenodotus/master/install.sh | bash -s -- --browser brave
+
+# Chromium
+curl -fsSL https://raw.githubusercontent.com/iosmanthus/zenodotus/master/install.sh | bash -s -- --browser chromium
 ```
 
-The server listens on `http://localhost:18080` by default. To use a different port:
+Or download `install.sh` and run it manually:
 
 ```bash
-PORT=9090 pnpm dev:server
+./install.sh --browser brave --extension-id <your-extension-id>
 ```
 
-To use Codex as the default provider:
+Run `./install.sh --help` for all options.
 
-```bash
-PROVIDER=codex pnpm dev:server
-```
+### 2. Install the extension
 
-### 2. Load the extension
-
-```bash
-pnpm build:extension
-```
-
-Then in your browser:
+Download the latest `.zip` from [GitHub Releases](https://github.com/iosmanthus/zenodotus/releases), then:
 
 1. Go to `chrome://extensions` (or `brave://extensions`)
 2. Enable **Developer mode**
-3. Click **Load unpacked**
-4. Select `extension/.output/chrome-mv3`
-
-Or download the latest release from [GitHub Releases](https://github.com/iosmanthus/zenodotus/releases).
+3. Click **Load unpacked** and select the extracted folder
 
 ## Usage
 
-Click the Zenodotus extension icon to open the popup.
-
-### Organize Tabs
-
-Click **Organize Tabs** to group all open tabs across all windows. The agent analyzes each tab and assigns it to a group. Existing groups are preserved and reused.
+Click the Zenodotus extension icon, then click **Organize Tabs** to group all tabs in the current window.
 
 ### Auto-group
 
-Toggle **Auto-group new tabs** to automatically group new tabs when they finish loading. New tabs are batched (2s debounce, 10s max wait) to reduce agent calls.
+Toggle **Auto-group new tabs** to automatically group new tabs when they finish loading. Tabs are batched (2s debounce, 10s max wait) to reduce agent calls.
 
 ### Settings
 
-Expand **Settings** to configure:
-
-- **Server URL** -- Backend address. Default: `http://localhost:18080`
 - **Provider** -- `claude-code` (default) or `codex`
-- **Model** -- Model name. Default: `sonnet` for Claude Code. Leave empty for Codex default.
-- **Enable thinking** -- Turn on extended thinking for more deliberate grouping. Off by default for speed.
-- **Custom Prompt** -- Additional instructions. Example: `"Group by project, use Chinese names"`
+- **Model** -- e.g. `sonnet`, `opus`, `haiku`. Default: `sonnet`
+- **Enable thinking** -- Extended thinking for more deliberate grouping
+- **Custom Prompt** -- e.g. `"Group by project, use Chinese names"`
 
-Click **Save** to persist settings.
+## Development
+
+```bash
+git clone https://github.com/iosmanthus/zenodotus.git && cd zenodotus
+pnpm install
+
+# Build and install NMH locally
+pnpm build:server
+./install.sh --local --browser brave
+
+# Build extension
+pnpm build:extension
+# Or run in dev mode
+pnpm dev:extension
+```

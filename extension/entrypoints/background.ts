@@ -1,10 +1,7 @@
-import type { components } from "@zenodotus/api-spec/schema";
+import type { TabInfo, ExistingGroup, GroupResponse } from "@zenodotus/api-spec";
 import { requestGrouping } from "@/utils/api";
 import { colorForGroup } from "@/utils/color";
 
-type TabInfo = components["schemas"]["TabInfo"];
-type ExistingGroup = components["schemas"]["ExistingGroup"];
-type GroupResponse = components["schemas"]["GroupResponse"];
 type NonEmptyArray<T> = [T, ...T[]];
 
 const log = (...args: unknown[]) => console.log("[zenodotus]", ...args);
@@ -53,11 +50,11 @@ export default defineBackground(() => {
     };
   }
 
-  async function getExistingGroups(): Promise<ExistingGroup[]> {
-    const allTabs = await chrome.tabs.query({ windowType: "normal" });
+  async function getExistingGroups(windowId: number): Promise<ExistingGroup[]> {
+    const tabs = await chrome.tabs.query({ windowId });
     const groupMap = new Map<number, number[]>();
 
-    for (const tab of allTabs) {
+    for (const tab of tabs) {
       if (tab.id == null) continue;
       if (tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) {
         if (!groupMap.has(tab.groupId)) {
@@ -83,13 +80,15 @@ export default defineBackground(() => {
     return name.toLowerCase().replace(/\s+/g, "");
   }
 
-  async function applyGrouping(result: GroupResponse): Promise<void> {
-    log("applying grouping:", result.groups.length, "groups");
+  async function applyGrouping(result: GroupResponse, windowId: number): Promise<void> {
+    log("applying grouping:", result.groups.length, "groups for window", windowId);
 
+    const windowGroupIds = new Set<number>();
     const nameToGroup = new Map<string, { groupId: number; name: string }>();
-    const allTabs = await chrome.tabs.query({ windowType: "normal" });
-    for (const tab of allTabs) {
+    const windowTabs = await chrome.tabs.query({ windowId });
+    for (const tab of windowTabs) {
       if (tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) {
+        windowGroupIds.add(tab.groupId);
         try {
           const g = await chrome.tabGroups.get(tab.groupId);
           const key = normalizeName(g.title || "");
@@ -108,8 +107,10 @@ export default defineBackground(() => {
       const validTabIds = [];
       for (const tabId of group.tabIds) {
         try {
-          await chrome.tabs.get(tabId);
-          validTabIds.push(tabId);
+          const tab = await chrome.tabs.get(tabId);
+          if (tab.windowId === windowId) {
+            validTabIds.push(tabId);
+          }
         } catch {
           log("tab no longer exists:", tabId);
         }
@@ -119,7 +120,11 @@ export default defineBackground(() => {
       const tabIds: NonEmptyArray<number> = [first, ...rest];
 
       const match = group.name ? nameToGroup.get(normalizeName(group.name)) : undefined;
-      let targetGroupId = group.groupId ?? match?.groupId;
+      // Only use groupId if it belongs to this window
+      const candidateGroupId = group.groupId ?? match?.groupId;
+      let targetGroupId = candidateGroupId != null && windowGroupIds.has(candidateGroupId)
+        ? candidateGroupId
+        : match?.groupId;
 
       if (targetGroupId != null) {
         try {
@@ -147,19 +152,19 @@ export default defineBackground(() => {
     }
   }
 
-  async function organizeAllTabs(): Promise<void> {
-    log("organizeAllTabs start");
-    const allTabs = await chrome.tabs.query({ windowType: "normal" });
-    const existingGroups = await getExistingGroups();
+  async function organizeAllTabs(windowId: number): Promise<void> {
+    log("organizeAllTabs start for window", windowId);
+    const windowTabs = await chrome.tabs.query({ windowId });
+    const existingGroups = await getExistingGroups(windowId);
     const { prompt, model, thinking, provider } = await chrome.storage.local.get({
       prompt: "",
       model: "",
       thinking: false,
       provider: "",
     });
-    const tabInfoResults = await Promise.all(allTabs.map(collectTabInfo));
+    const tabInfoResults = await Promise.all(windowTabs.map(collectTabInfo));
     const tabInfos = tabInfoResults.filter((t): t is TabInfo => t !== null);
-    log("sending", tabInfos.length, "tabs,", existingGroups.length, "existing groups to server");
+    log("sending", tabInfos.length, "tabs,", existingGroups.length, "existing groups for window", windowId);
 
     const result = await requestGrouping({
       tabs: tabInfos,
@@ -172,7 +177,7 @@ export default defineBackground(() => {
 
     if (result) {
       log("server returned", result.groups.length, "groups");
-      await applyGrouping(result);
+      await applyGrouping(result, windowId);
     } else {
       logError("server returned no result");
     }
@@ -193,33 +198,46 @@ export default defineBackground(() => {
 
     if (tabs.length === 0) return;
 
-    log("auto-group: flushing", tabs.length, "pending tabs");
-    const existingGroups = await getExistingGroups();
+    // Group pending tabs by window
+    const tabsByWindow = new Map<number, chrome.tabs.Tab[]>();
+    for (const tab of tabs) {
+      if (tab.windowId == null) continue;
+      if (!tabsByWindow.has(tab.windowId)) {
+        tabsByWindow.set(tab.windowId, []);
+      }
+      tabsByWindow.get(tab.windowId)!.push(tab);
+    }
+
     const { prompt, model, thinking, provider } = await chrome.storage.local.get({
       prompt: "",
       model: "",
       thinking: false,
       provider: "",
     });
-    const tabInfoResults = await Promise.all(tabs.map(collectTabInfo));
-    const tabInfos = tabInfoResults.filter((t): t is TabInfo => t !== null);
 
-    if (tabInfos.length === 0) return;
+    for (const [windowId, windowTabs] of tabsByWindow) {
+      log("auto-group: flushing", windowTabs.length, "pending tabs for window", windowId);
+      const existingGroups = await getExistingGroups(windowId);
+      const tabInfoResults = await Promise.all(windowTabs.map(collectTabInfo));
+      const tabInfos = tabInfoResults.filter((t): t is TabInfo => t !== null);
 
-    const result = await requestGrouping({
-      tabs: tabInfos,
-      existingGroups,
-      prompt,
-      model: model || undefined,
-      thinking: thinking || undefined,
-      provider: provider || undefined,
-    });
+      if (tabInfos.length === 0) continue;
 
-    if (result) {
-      log("auto-group: server returned", result.groups.length, "groups");
-      await applyGrouping(result);
-    } else {
-      logError("auto-group: server returned no result");
+      const result = await requestGrouping({
+        tabs: tabInfos,
+        existingGroups,
+        prompt,
+        model: model || undefined,
+        thinking: thinking || undefined,
+        provider: provider || undefined,
+      });
+
+      if (result) {
+        log("auto-group: server returned", result.groups.length, "groups for window", windowId);
+        await applyGrouping(result, windowId);
+      } else {
+        logError("auto-group: server returned no result for window", windowId);
+      }
     }
   }
 
@@ -250,7 +268,7 @@ export default defineBackground(() => {
         logError("organize timed out after 30s");
         chrome.storage.local.set({ organizeStatus: "error", organizeError: "Timed out" });
       }, 30000);
-      organizeAllTabs()
+      organizeAllTabs(msg.windowId as number)
         .then(() => {
           clearTimeout(organizeTimeout);
           chrome.storage.local.set({ organizeStatus: "done" });

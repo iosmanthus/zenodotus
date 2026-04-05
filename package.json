@@ -3,13 +3,16 @@
   "private": true,
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "generate": "pnpm --filter @zenodotus/api-spec generate",
-    "dev:server": "pnpm --filter @zenodotus/server dev",
+    "build:server": "pnpm --filter @zenodotus/server build",
+    "install:nmh": "./install.sh --local",
     "dev:extension": "pnpm --filter @zenodotus/extension dev",
     "build:extension": "pnpm --filter @zenodotus/extension build",
     "lint": "biome check .",
     "format": "biome check --write .",
     "test": "vitest run"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.10",

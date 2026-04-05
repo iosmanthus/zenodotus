@@ -138,7 +138,7 @@ export default defineBackground(() => {
 
       if (targetGroupId == null && group.name) {
         try {
-          const newGroupId = await chrome.tabs.group({ tabIds });
+          const newGroupId = await chrome.tabs.group({ tabIds, createProperties: { windowId } });
           await chrome.tabGroups.update(newGroupId, {
             title: group.name,
             color: colorForGroup(group.name),

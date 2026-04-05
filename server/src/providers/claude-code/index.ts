@@ -1,12 +1,38 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import type { components } from "@zenodotus/api-spec/schema";
-import { buildFullPrompt, outputSchema } from "../prompt";
+import type { GroupRequest, GroupResponse } from "@zenodotus/api-spec";
+import { buildFullPrompt } from "../prompt";
 
 const execFileAsync = promisify(execFile);
 
-type GroupRequest = components["schemas"]["GroupRequest"];
-type GroupResponse = components["schemas"]["GroupResponse"];
+const outputSchema = {
+  type: "object",
+  required: ["groups"],
+  properties: {
+    groups: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["tabIds"],
+        properties: {
+          groupId: {
+            type: "integer",
+            description: "ID of an existing group. Omit to create a new group.",
+          },
+          name: {
+            type: "string",
+            description: "Name for the group. Required when creating a new group.",
+          },
+          tabIds: {
+            type: "array",
+            items: { type: "integer" },
+            description: "Tab IDs to assign to this group",
+          },
+        },
+      },
+    },
+  },
+};
 
 export async function assignGroups(request: GroupRequest): Promise<GroupResponse | null> {
   const fullPrompt = buildFullPrompt(request);

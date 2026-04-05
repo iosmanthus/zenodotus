@@ -3,21 +3,60 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import type { components } from "@zenodotus/api-spec/schema";
+import type { GroupRequest, GroupResponse } from "@zenodotus/api-spec";
 import { buildFullPrompt } from "../prompt";
-import { openAIOutputSchema } from "./schema";
 
 const execFileAsync = promisify(execFile);
 
-type GroupRequest = components["schemas"]["GroupRequest"];
-type GroupResponse = components["schemas"]["GroupResponse"];
+/**
+ * OpenAI structured output schema for GroupResponse.
+ *
+ * OpenAI requires:
+ * - All object properties listed in `required`
+ * - Optional properties wrapped in `anyOf: [{type}, {type: "null"}]`
+ * - All objects have `additionalProperties: false`
+ */
+const outputSchema = {
+  type: "object",
+  required: ["groups"],
+  additionalProperties: false,
+  properties: {
+    groups: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["groupId", "name", "tabIds"],
+        additionalProperties: false,
+        properties: {
+          groupId: {
+            anyOf: [
+              { type: "integer", description: "ID of an existing group. Omit to create a new group." },
+              { type: "null" },
+            ],
+          },
+          name: {
+            anyOf: [
+              { type: "string", description: "Name for the group. Required when creating a new group." },
+              { type: "null" },
+            ],
+          },
+          tabIds: {
+            type: "array",
+            items: { type: "integer" },
+            description: "Tab IDs to assign to this group",
+          },
+        },
+      },
+    },
+  },
+};
 
 export async function assignGroups(request: GroupRequest): Promise<GroupResponse | null> {
   const fullPrompt = buildFullPrompt(request);
 
   const tmpDir = mkdtempSync(join(tmpdir(), "zenodotus-"));
   const schemaPath = join(tmpDir, "schema.json");
-  writeFileSync(schemaPath, JSON.stringify(openAIOutputSchema));
+  writeFileSync(schemaPath, JSON.stringify(outputSchema));
 
   const outputPath = join(tmpDir, "output.json");
 

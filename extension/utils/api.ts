@@ -1,7 +1,4 @@
-import type { components } from "@zenodotus/api-spec/schema";
-
-type GroupRequest = components["schemas"]["GroupRequest"];
-type GroupResponse = components["schemas"]["GroupResponse"];
+import type { GroupRequest, GroupResponse } from "@zenodotus/api-spec";
 
 const NMH_HOST = "com.zenodotus.host";
 

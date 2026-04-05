@@ -5,9 +5,8 @@
     "moduleResolution": "bundler",
     "esModuleInterop": true,
     "strict": true,
-    "outDir": "dist",
-    "rootDir": "src",
-    "declaration": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true
   },
   "include": ["src"]

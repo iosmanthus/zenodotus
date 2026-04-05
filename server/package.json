@@ -4,9 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "esbuild src/stdio.ts --bundle --platform=node --format=esm --outfile=dist/stdio.mjs --banner:js='#!/usr/bin/env node'"
+    "build": "esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.mjs --banner:js='#!/usr/bin/env node'"
   },
   "devDependencies": {
+    "@types/node": "^25.5.2",
     "@zenodotus/api-spec": "workspace:*",
     "esbuild": "^0.25.0",
     "typescript": "^5.8.0"

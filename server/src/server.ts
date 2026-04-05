@@ -1,7 +1,5 @@
 import { assignGroups } from "./providers/index.ts";
-import type { components } from "@zenodotus/api-spec/schema";
-
-type GroupRequest = components["schemas"]["GroupRequest"];
+import type { GroupRequest } from "@zenodotus/api-spec";
 
 function readMessage(): Promise<GroupRequest> {
   return new Promise((resolve, reject) => {

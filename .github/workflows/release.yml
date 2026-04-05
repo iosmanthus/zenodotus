@@ -25,7 +25,7 @@ jobs:
 
       - run: pnpm install
 
-      - run: pnpm generate
+      - run: pnpm build:server
 
       - run: pnpm --filter @zenodotus/extension zip
 
@@ -35,4 +35,6 @@ jobs:
           tag_name: v${{ github.event.inputs.version }}
           name: v${{ github.event.inputs.version }}
           generate_release_notes: true
-          files: extension/.output/*.zip
+          files: |
+            extension/.output/*.zip
+            server/dist/server.mjs

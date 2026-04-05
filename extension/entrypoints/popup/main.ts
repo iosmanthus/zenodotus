@@ -26,10 +26,11 @@ function setOrganizing(active: boolean): void {
   organizeBtn.textContent = active ? "Organizing..." : "Organize Tabs";
 }
 
-organizeBtn.addEventListener("click", () => {
+organizeBtn.addEventListener("click", async () => {
   setOrganizing(true);
   errorMsg.textContent = "";
-  chrome.runtime.sendMessage({ action: "organize" });
+  const currentWindow = await chrome.windows.getCurrent();
+  chrome.runtime.sendMessage({ action: "organize", windowId: currentWindow.id });
 });
 
 chrome.storage.local.onChanged.addListener((changes) => {

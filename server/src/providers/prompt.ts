@@ -1,24 +1,14 @@
-import { spec } from "@zenodotus/api-spec";
-import type { components } from "@zenodotus/api-spec/schema";
-
-type GroupRequest = components["schemas"]["GroupRequest"];
-
-const specComponents = (spec as Record<string, unknown>).components as {
-  schemas: Record<string, unknown>;
-};
-
-export const outputSchema = specComponents.schemas.GroupResponse as Record<string, unknown>;
+import type { GroupRequest } from "@zenodotus/api-spec";
 
 export const SYSTEM_PROMPT = [
   "You are a browser tab grouping assistant.",
   "Assign tabs to groups based on their URL, title, and description.",
   "",
   "Rules:",
-  "1. Prefer assigning tabs to existing groups when relevant.",
-  "2. Only create new groups when no existing group fits.",
-  "3. Keep group names short (2-4 words).",
-  "4. Reuse exact existing group names. Do not create spelling or casing variants",
-  "5. Tabs that do not fit any group should be omitted from the response.",
+  "1. Keep group names short (3 words max).",
+  "2. When no existing groups are provided, freely create groups based on tab content.",
+  "3. Prefer assigning tabs to existing groups when relevant. Reuse exact existing group names — do not create spelling or casing variants.",
+  "4. When a tab does not fit any existing group, create a new group for it. Only omit tabs that are completely unclassifiable (e.g. blank pages).",
 ].join("\n");
 
 export function buildUserPrompt(request: GroupRequest): string {

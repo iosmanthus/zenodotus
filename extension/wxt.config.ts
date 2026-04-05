@@ -1,6 +1,9 @@
 import { defineConfig } from "wxt";
 
 export default defineConfig({
+  zip: {
+    artifactTemplate: "zenodotus-extension.zip",
+  },
   manifest: {
     name: "Zenodotus",
     description: "Intelligent LLM-powered tab grouping",

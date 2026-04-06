@@ -1,7 +1,7 @@
 export type {
-  TabInfo,
   ExistingGroup,
-  GroupRequest,
   GroupAssignment,
+  GroupRequest,
   GroupResponse,
+  TabInfo,
 } from "./types.js";

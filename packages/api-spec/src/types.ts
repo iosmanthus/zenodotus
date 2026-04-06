@@ -17,7 +17,7 @@ export interface GroupRequest {
   existingGroups?: ExistingGroup[];
   prompt?: string;
   model?: string;
-  thinking?: boolean;
+  debug?: boolean;
   provider?: string;
 }
 

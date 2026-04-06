@@ -49,13 +49,16 @@ Click the Zenodotus extension icon, then click **Organize Tabs** to group all ta
 
 ### Auto-group
 
-Toggle **Auto-group new tabs** to automatically group new tabs when they finish loading. Tabs are batched (2s debounce, 10s max wait) to reduce agent calls.
+Toggle **Auto-group new tabs** to automatically regroup tabs when they are created, navigate to a new URL, or finish loading. Changes are batched with a 5s debounce to reduce agent calls.
+
+> **Note:** When auto-group is enabled, Zenodotus manages all tab groups in the window. Manually created groups may be reorganized or removed.
 
 ### Settings
 
 - **Provider** -- `claude-code` (default) or `codex`
 - **Model** -- e.g. `sonnet`, `opus`, `haiku`. Default: `sonnet`
-- **Enable thinking** -- Extended thinking for more deliberate grouping
+- **Min Tabs to Group** -- Minimum number of tabs before grouping activates (0 = always group)
+- **Debug logging** -- Log requests and responses to `/tmp/zenodotus.log`
 - **Custom Prompt** -- e.g. `"Group by project, use Chinese names"`
 
 ## Development

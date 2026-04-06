@@ -20,10 +20,6 @@
         <input type="text" id="provider-input" placeholder="claude-code" />
         <label class="setting-label">Model</label>
         <input type="text" id="model-input" placeholder="sonnet" />
-        <label class="setting-row">
-          <input type="checkbox" id="thinking-toggle" />
-          Enable thinking
-        </label>
         <label class="setting-label">Min Tabs to Group</label>
         <input type="number" id="min-tabs-input" min="0" step="1" placeholder="0" />
         <label class="setting-label">Custom Prompt</label>
@@ -32,6 +28,10 @@
           rows="4"
           placeholder="e.g. Group by project, use English names"
         ></textarea>
+        <label class="setting-row">
+          <input type="checkbox" id="debug-toggle" />
+          Debug logging
+        </label>
         <button type="button" id="save-settings-btn">Save</button>
       </details>
     </div>

@@ -1,4 +1,4 @@
-import type { TabInfo, ExistingGroup, GroupResponse } from "@zenodotus/api-spec";
+import type { ExistingGroup, GroupResponse, TabInfo } from "@zenodotus/api-spec";
 import { requestGrouping } from "@/utils/api";
 import { colorForGroup } from "@/utils/color";
 
@@ -120,9 +120,10 @@ export default defineBackground(() => {
       const match = group.name ? nameToGroup.get(normalizeName(group.name)) : undefined;
       // Only use groupId if it belongs to this window
       const candidateGroupId = group.groupId ?? match?.groupId;
-      let targetGroupId = candidateGroupId != null && windowGroupIds.has(candidateGroupId)
-        ? candidateGroupId
-        : match?.groupId;
+      let targetGroupId =
+        candidateGroupId != null && windowGroupIds.has(candidateGroupId)
+          ? candidateGroupId
+          : match?.groupId;
 
       if (targetGroupId != null) {
         try {
@@ -154,22 +155,29 @@ export default defineBackground(() => {
     log("organizeAllTabs start for window", windowId);
     const windowTabs = await chrome.tabs.query({ windowId });
     const existingGroups = await getExistingGroups(windowId);
-    const { prompt, model, thinking, provider } = await chrome.storage.local.get({
+    const { prompt, model, debug, provider } = await chrome.storage.local.get({
       prompt: "",
       model: "",
-      thinking: false,
+      debug: false,
       provider: "",
     });
     const tabInfoResults = await Promise.all(windowTabs.map(collectTabInfo));
     const tabInfos = tabInfoResults.filter((t): t is TabInfo => t !== null);
-    log("sending", tabInfos.length, "tabs,", existingGroups.length, "existing groups for window", windowId);
+    log(
+      "sending",
+      tabInfos.length,
+      "tabs,",
+      existingGroups.length,
+      "existing groups for window",
+      windowId,
+    );
 
     const result = await requestGrouping({
       tabs: tabInfos,
       existingGroups,
       prompt,
       model: model || undefined,
-      thinking: thinking || undefined,
+      debug: debug || undefined,
       provider: provider || undefined,
     });
 
@@ -221,7 +229,14 @@ export default defineBackground(() => {
       const allTabs = await chrome.tabs.query({ windowId });
       const { minTabsToGroup } = await chrome.storage.local.get({ minTabsToGroup: 0 });
       if (minTabsToGroup > 0 && allTabs.length < minTabsToGroup) {
-        log("auto-group: window", windowId, "has", allTabs.length, "tabs, below minimum", minTabsToGroup);
+        log(
+          "auto-group: window",
+          windowId,
+          "has",
+          allTabs.length,
+          "tabs, below minimum",
+          minTabsToGroup,
+        );
         await ungroupAll(windowId);
         return;
       }
@@ -236,29 +251,41 @@ export default defineBackground(() => {
     return autoGroupEnabled as boolean;
   }
 
-  async function onTabUpdated(...[, changeInfo, tab]: Parameters<Parameters<typeof chrome.tabs.onUpdated.addListener>[0]>) {
-    if (!changeInfo.url) return;
+  async function onTabUpdated(
+    ...[, changeInfo, tab]: Parameters<Parameters<typeof chrome.tabs.onUpdated.addListener>[0]>
+  ) {
+    if (!changeInfo.url && changeInfo.status !== "complete") return;
     if (!(await isAutoGroupEnabled())) return;
     if (tab.windowId == null) return;
-    log("auto-group: tab URL changed", tab.id, tab.url?.slice(0, 60));
+    log(
+      "auto-group: tab updated",
+      tab.id,
+      changeInfo.url ? `url=${tab.url?.slice(0, 60)}` : `status=${changeInfo.status}`,
+    );
     markDirty(tab.windowId);
   }
 
-  async function onTabCreated(...[tab]: Parameters<Parameters<typeof chrome.tabs.onCreated.addListener>[0]>) {
+  async function onTabCreated(
+    ...[tab]: Parameters<Parameters<typeof chrome.tabs.onCreated.addListener>[0]>
+  ) {
     if (!(await isAutoGroupEnabled())) return;
     if (tab.windowId == null) return;
     log("auto-group: tab created", tab.id);
     markDirty(tab.windowId);
   }
 
-  async function onTabRemoved(...[, removeInfo]: Parameters<Parameters<typeof chrome.tabs.onRemoved.addListener>[0]>) {
+  async function onTabRemoved(
+    ...[, removeInfo]: Parameters<Parameters<typeof chrome.tabs.onRemoved.addListener>[0]>
+  ) {
     if (removeInfo.isWindowClosing) return;
     if (!(await isAutoGroupEnabled())) return;
     log("auto-group: tab removed from window", removeInfo.windowId);
     markDirty(removeInfo.windowId);
   }
 
-  async function onTabAttached(...[, attachInfo]: Parameters<Parameters<typeof chrome.tabs.onAttached.addListener>[0]>) {
+  async function onTabAttached(
+    ...[, attachInfo]: Parameters<Parameters<typeof chrome.tabs.onAttached.addListener>[0]>
+  ) {
     if (!(await isAutoGroupEnabled())) return;
     log("auto-group: tab attached to window", attachInfo.newWindowId);
     markDirty(attachInfo.newWindowId);

@@ -24,6 +24,14 @@
     }
   },
   "files": {
-    "includes": ["**", "!**/node_modules", "!**/dist", "!**/.output", "!**/.wxt", "!**/generated"]
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/.output",
+      "!**/.wxt",
+      "!**/generated",
+      "!**/.direnv"
+    ]
   }
 }

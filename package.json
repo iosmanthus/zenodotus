@@ -12,7 +12,9 @@
     "test": "vitest run"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.10",

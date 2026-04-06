@@ -7,9 +7,10 @@ import { buildFullPrompt } from "./prompt";
 export type Provider = "claude-code" | "codex";
 
 const DEFAULT_PROVIDER: Provider = (process.env.PROVIDER as Provider) || "claude-code";
-const LOG_FILE = "/tmp/zenodotus.log";
+const LOG_FILE = process.env.ZENODOTUS_LOG || "/tmp/zenodotus.log";
 
-function logToFile(label: string, data: unknown): void {
+function logToFile(label: string, data: unknown, enabled: boolean): void {
+  if (!enabled) return;
   const ts = new Date().toISOString();
   const line = `[${ts}] ${label}: ${JSON.stringify(data, null, 2)}\n`;
   try {
@@ -22,10 +23,20 @@ function logToFile(label: string, data: unknown): void {
 export async function assignGroups(request: GroupRequest): Promise<GroupResponse | null> {
   const provider = request.provider as Provider | undefined;
   const selected = provider || DEFAULT_PROVIDER;
+  const debug = request.debug ?? !!process.env.ZENODOTUS_DEBUG;
 
-  logToFile("provider", selected);
-  logToFile("request", { tabs: request.tabs.length, existingGroups: request.existingGroups?.length ?? 0, model: request.model, prompt: request.prompt });
-  logToFile("full_prompt", buildFullPrompt(request));
+  logToFile("provider", selected, debug);
+  logToFile(
+    "request",
+    {
+      tabs: request.tabs.length,
+      existingGroups: request.existingGroups?.length ?? 0,
+      model: request.model,
+      prompt: request.prompt,
+    },
+    debug,
+  );
+  logToFile("full_prompt", buildFullPrompt(request), debug);
 
   let result: GroupResponse | null;
   switch (selected) {
@@ -38,6 +49,6 @@ export async function assignGroups(request: GroupRequest): Promise<GroupResponse
       break;
   }
 
-  logToFile("response", result);
+  logToFile("response", result, debug);
   return result;
 }

@@ -30,13 +30,19 @@ const outputSchema = {
         properties: {
           groupId: {
             anyOf: [
-              { type: "integer", description: "ID of an existing group. Omit to create a new group." },
+              {
+                type: "integer",
+                description: "ID of an existing group. Omit to create a new group.",
+              },
               { type: "null" },
             ],
           },
           name: {
             anyOf: [
-              { type: "string", description: "Name for the group. Required when creating a new group." },
+              {
+                type: "string",
+                description: "Name for the group. Required when creating a new group.",
+              },
               { type: "null" },
             ],
           },

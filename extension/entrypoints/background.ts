@@ -9,9 +9,8 @@ const logError = (...args: unknown[]) => console.error("[zenodotus]", ...args);
 
 export default defineBackground(() => {
   const DEBOUNCE_MS = 5000;
-  const dirtyWindows = new Set<number>();
   const flushingWindows = new Set<number>();
-  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  const debounceTimers = new Map<number, ReturnType<typeof setTimeout>>();
 
   async function getMetaDescription(tabId: number): Promise<string> {
     try {
@@ -190,32 +189,18 @@ export default defineBackground(() => {
     log("organizeAllTabs done");
   }
 
-  async function ungroupAll(windowId: number): Promise<void> {
-    const tabs = await chrome.tabs.query({ windowId });
-    const groupedTabIds = tabs
-      .filter((t) => t.id != null && t.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE)
-      .map((t) => t.id!);
-    const [first, ...rest] = groupedTabIds;
-    if (first == null) return;
-    log("ungrouping", groupedTabIds.length, "tabs in window", windowId);
-    chrome.tabs.ungroup([first, ...rest]);
-  }
-
   function markDirty(windowId: number): void {
-    dirtyWindows.add(windowId);
-    if (debounceTimer != null) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(flushAll, DEBOUNCE_MS);
-  }
-
-  function flushAll(): void {
-    debounceTimer = null;
-    const windows = [...dirtyWindows];
-    dirtyWindows.clear();
-    for (const windowId of windows) {
-      void flushWindow(windowId).catch((err) =>
-        logError("auto-group flush failed for window", windowId, err),
-      );
-    }
+    const existing = debounceTimers.get(windowId);
+    if (existing != null) clearTimeout(existing);
+    debounceTimers.set(
+      windowId,
+      setTimeout(() => {
+        debounceTimers.delete(windowId);
+        void flushWindow(windowId).catch((err) =>
+          logError("auto-group flush failed for window", windowId, err),
+        );
+      }, DEBOUNCE_MS),
+    );
   }
 
   async function flushWindow(windowId: number): Promise<void> {
@@ -230,14 +215,13 @@ export default defineBackground(() => {
       const { minTabsToGroup } = await chrome.storage.local.get({ minTabsToGroup: 0 });
       if (minTabsToGroup > 0 && allTabs.length < minTabsToGroup) {
         log(
-          "auto-group: window",
+          "auto-group: skipping window",
           windowId,
-          "has",
+          "- has",
           allTabs.length,
           "tabs, below minimum",
           minTabsToGroup,
         );
-        await ungroupAll(windowId);
         return;
       }
       await organizeAllTabs(windowId);

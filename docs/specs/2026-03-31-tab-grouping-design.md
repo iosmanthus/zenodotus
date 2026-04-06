@@ -2,7 +2,7 @@
 
 ## Overview
 
-A Chrome extension that uses LLM to intelligently group and sort browser tabs. The extension communicates with a local HTTP server that abstracts the LLM backend (Claude Code SDK, Codex, or others).
+A Chrome extension that uses LLM (Claude Code or Codex) to intelligently group browser tabs. The extension communicates with a local native messaging host (NMH) that dispatches to configurable LLM providers.
 
 ## Architecture
 
@@ -10,61 +10,83 @@ A Chrome extension that uses LLM to intelligently group and sort browser tabs. T
 ┌─────────────────────────────────────┐
 │         Chrome Extension            │
 │                                     │
-│  popup.html  ← button + prompt edit │
+│  popup.html  ← settings + trigger   │
 │  background.js (service worker)     │
-│    ├ listen tab events (onUpdated)  │
-│    ├ collect tabs across windows    │
-│    ├ inject content script for meta │
-│    └ call local server API          │
-│  content.js  ← extract meta desc   │
+│    ├ unified per-window scheduler   │
+│    ├ listen tab events              │
+│    ├ inject script for meta desc    │
+│    └ call NMH via native messaging  │
 │                                     │
-└──────────── fetch ──────────────────┘
+└──── chrome.runtime.sendNative ──────┘
                  │
                  ▼
 ┌─────────────────────────────────────┐
-│        Local Server (:18080)        │
+│     Native Messaging Host (NMH)    │
 │                                     │
-│  POST /group                        │
-│  GET  /health                       │
+│  stdin/stdout length-prefixed JSON  │
 │                                     │
-│  Backend swappable via providers:   │
-│    claude-code / codex / ...        │
+│  Provider routing:                  │
+│    claude-code / codex              │
 └─────────────────────────────────────┘
 ```
+
+Communication uses Chrome's Native Messaging protocol: 4-byte little-endian length header followed by UTF-8 JSON body. No HTTP server or open ports required.
 
 ## Trigger Modes
 
 ### Manual Trigger
 
-User clicks the "Organize Tabs" button in the popup. All tabs across all windows are collected, enriched with meta descriptions, and sent to the server for grouping.
+User clicks **Organize Tabs** in the popup. All tabs in the current window are collected, enriched with meta descriptions, and sent to the NMH for grouping. The `minTabsToGroup` threshold is enforced — if the window has fewer tabs than the threshold, the popup shows an error message.
 
-### Auto Trigger
+### Auto Trigger (Unified Scheduler)
 
-When a tab finishes loading (`chrome.tabs.onUpdated`, status `complete`):
+When auto-group is enabled, tab events feed into a per-window reactive scheduler:
 
-1. Check if the tab is already in a group — if yes, skip.
-2. Extract url, title, and meta description.
-3. Query existing tab groups as context.
-4. Send the single tab + existing groups to the server.
-5. Apply the returned grouping.
+```
+tab event → isAutoGroupEnabled? → markDirty(windowId) → debounce(5s) → flushWindow(windowId)
+```
+
+**Monitored events:**
+
+| Event | Trigger condition |
+|-------|-------------------|
+| `chrome.tabs.onUpdated` | URL changed or status became `complete` |
+| `chrome.tabs.onCreated` | New tab created |
+| `chrome.tabs.onRemoved` | Tab removed (unless window is closing) |
+| `chrome.tabs.onAttached` | Tab moved from another window |
+
+**Scheduler behavior:**
+
+- **Per-window debounce** — Each window has its own 5s debounce timer (`Map<number, timeout>`). Multiple rapid events on the same window collapse into one flush.
+- **Per-window concurrency** — A `Set<number>` tracks windows currently flushing. If a flush is in progress for a window, `markDirty` re-enqueues it for after the current flush completes.
+- **Threshold check** — `flushWindow` skips grouping if the window has fewer tabs than `minTabsToGroup`. Tabs below threshold are left as-is (no ungrouping).
+
+> **Note:** When auto-group is enabled, Zenodotus manages all tab groups in the window. Manually created groups may be reorganized.
 
 ## Data Sources
 
 For each tab, the extension collects:
 
-- **URL** (~80 chars)
-- **Title** (~50 chars)
-- **Meta description** (~150 chars) — extracted via `chrome.scripting.executeScript` injecting a content script on demand
+- **URL** — `tab.url`
+- **Title** — `tab.title`
+- **Meta description** — Extracted via `chrome.scripting.executeScript` with a 3s timeout
 
-Estimated total for 50 tabs: ~14K chars (~4K tokens). Lightweight per request.
+If injection fails (e.g., restricted pages like `chrome://`), the extension falls back to URL + title only.
 
-If content script injection fails (e.g., restricted pages like `chrome://`), fall back to URL + title only.
+## API Protocol (Native Messaging)
 
-## API Protocol
+### Request (`GroupRequest`)
 
-### `POST /group`
-
-**Request:**
+```typescript
+interface GroupRequest {
+  tabs: TabInfo[];
+  existingGroups?: ExistingGroup[];
+  prompt?: string;
+  model?: string;
+  debug?: boolean;
+  provider?: string;
+}
+```
 
 ```json
 {
@@ -84,11 +106,14 @@ If content script injection fails (e.g., restricted pages like `chrome://`), fal
       "tabIds": [101, 102]
     }
   ],
-  "prompt": "User's custom grouping strategy prompt"
+  "prompt": "Group by project, use Chinese names",
+  "model": "sonnet",
+  "debug": true,
+  "provider": "claude-code"
 }
 ```
 
-**Response:**
+### Response (`GroupResponse`)
 
 ```json
 {
@@ -108,76 +133,40 @@ If content script injection fails (e.g., restricted pages like `chrome://`), fal
 **Response schema:**
 
 - `groups[].groupId` (optional number) — present: move tabs into existing group; absent: create new group.
-- `groups[].name` (optional string) — required when `groupId` is absent (new group). When present with `groupId`, renames the group.
+- `groups[].name` (optional string) — required when `groupId` is absent (new group).
 - `groups[].tabIds` (required number[]) — tabs to assign to this group.
 - Tabs not present in any group are left unchanged.
 
-### `GET /health`
-
-**Response:**
+### Error Response
 
 ```json
 {
-  "ok": true
+  "error": "codex CLI failed: command not found"
 }
 ```
+
+Specific provider errors propagate through the NMH to the extension. The popup displays errors to the user with a 5s auto-dismiss.
 
 ## AI Integration
-
-### Tool Definition (function calling)
-
-```json
-{
-  "name": "assign_tab_groups",
-  "description": "Assign browser tabs to groups based on their content and context.",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "groups": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "groupId": {
-              "type": "number",
-              "description": "ID of an existing group. Omit to create a new group."
-            },
-            "name": {
-              "type": "string",
-              "description": "Name for the group. Required when creating a new group."
-            },
-            "tabIds": {
-              "type": "array",
-              "items": { "type": "number" }
-            }
-          },
-          "required": ["tabIds"]
-        }
-      }
-    },
-    "required": ["groups"]
-  }
-}
-```
-
-Uses `parameters` as the schema field for compatibility across Anthropic and OpenAI APIs. The provider layer handles format differences.
 
 ### System Prompt (fixed, server-side)
 
 ```
-You are a browser tab grouping assistant. Assign tabs to groups based on their URL, title, and description.
+You are a browser tab grouping assistant.
+Assign tabs to groups based on their URL, title, and description.
 
 Rules:
-1. Prefer assigning tabs to existing groups when relevant.
-2. Only create new groups when no existing group fits.
-3. Keep group names short (2-4 words).
-4. Tabs that do not fit any group should be omitted from the response.
+1. Keep group names short (3 words max).
+2. When no existing groups are provided, freely create groups based on tab content.
+3. Reuse existing group names when a tab fits — do not create spelling or casing variants.
+4. When a tab does not fit any existing group, create a new group for it. Only omit tabs that are completely unclassifiable (e.g. blank pages).
+5. Existing groups show current tab-to-group assignments, but these may be stale. Decide each tab's group based solely on its current URL, title, and description. Move tabs to a different group if their content no longer fits.
 ```
 
 ### User Prompt (assembled by server)
 
 ```
-{user's custom prompt, e.g., "Group by project, use English names"}
+{user's custom prompt}
 
 Existing groups:
 {existingGroups JSON}
@@ -186,39 +175,65 @@ Tabs to group:
 {tabs JSON}
 ```
 
-The user's custom prompt is stored in `chrome.storage.local` and passed from the extension to the server. Default can be empty or a simple "Group by topic".
+### Providers
+
+**Claude Code** (`claude-code`) — Default. Uses `claude --print` with `--json-schema` for structured output.
+
+**Codex** (`codex`) — Uses `codex exec --ephemeral` with `--output-schema` for structured output. Writes schema and reads output via temp files.
+
+Both providers throw errors with specific messages on failure, which propagate to the popup.
 
 ## Extension Structure
 
-### Permissions (manifest.json)
+### Permissions (manifest.json via WXT)
 
 ```json
 {
   "manifest_version": 3,
-  "permissions": ["tabs", "tabGroups", "scripting", "storage"],
-  "host_permissions": ["<all_urls>"],
-  "action": { "default_popup": "popup.html" },
-  "background": { "service_worker": "background.js" }
+  "permissions": ["tabs", "tabGroups", "scripting", "storage", "nativeMessaging"],
+  "host_permissions": ["<all_urls>"]
 }
 ```
 
 ### File Layout
 
 ```
+packages/api-spec/
+  src/types.ts         — shared TypeScript types (TabInfo, GroupRequest, GroupResponse, etc.)
+
 extension/
-  manifest.json
-  background.js         — core logic: event listeners, tab collection, API calls, group execution
-  content.js            — extract meta description, injected on demand via scripting API
-  popup.html/js/css     — UI: button + prompt editor + service status indicator
+  entrypoints/
+    background.ts      — service worker: scheduler, tab events, grouping logic
+    popup/
+      index.html       — popup UI
+      main.ts          — popup logic: button, settings, status display
+      style.css        — popup styles
   utils/
-    color.js            — group name hash → Chrome tab group color
-    api.js              — wrap /group and /health requests
+    api.ts             — NMH communication via chrome.runtime.sendNativeMessage
+    color.ts           — group name hash → Chrome tab group color
 
 server/
-  server.mjs            — HTTP server, prompt assembly, AI call, response parsing
-  providers/
-    claude-code.mjs     — Claude Code SDK adapter
+  src/
+    server.ts          — NMH entry: stdin/stdout message framing, dispatch to providers
+    providers/
+      index.ts         — provider routing, debug logging
+      prompt.ts        — system + user prompt assembly
+      claude-code/
+        index.ts       — Claude Code CLI adapter
+      codex/
+        index.ts       — Codex CLI adapter
 ```
+
+### Settings (chrome.storage.local)
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `provider` | string | `"claude-code"` | LLM provider (`claude-code` or `codex`) |
+| `model` | string | `""` | Model name (e.g. `sonnet`, `opus`) |
+| `prompt` | string | `""` | Custom grouping instruction |
+| `minTabsToGroup` | number | `0` | Skip grouping below this tab count (0 = always group) |
+| `autoGroupEnabled` | boolean | `false` | Enable reactive auto-grouping |
+| `debug` | boolean | `false` | Log requests/responses to `/tmp/zenodotus.log` |
 
 ### Group Color Assignment
 
@@ -228,16 +243,23 @@ Chrome supports 9 tab group colors. Colors are assigned by hashing the group nam
 
 | Scenario | Handling |
 |----------|----------|
-| Local server not running | Popup shows "Service disconnected", button disabled. User manually clicks a check button to retry health check. |
-| AI returns invalid JSON | Silently skip this grouping, no retry. |
-| Content script injection fails | Fall back to URL + title only, do not block. |
-| Tab closed before grouping executes | Ignore the tab, continue processing the rest. |
-| AI returns non-existent tabId | Filter out invalid tabIds, execute only valid ones. |
-| AI returns non-existent groupId | Treat as new group, create with the returned name. |
+| NMH not installed | `chrome.runtime.sendNativeMessage` throws; popup shows error |
+| Provider CLI not found | NMH returns `{ error: "..." }`; popup shows specific message |
+| AI returns invalid JSON | Provider throws; error propagates to popup |
+| Content script injection fails | Fall back to URL + title only, do not block |
+| Tab closed before grouping executes | `chrome.tabs.get` catch filters it out, continue with rest |
+| AI returns non-existent tabId | Filtered out during `applyGrouping` validation |
+| Organize timeout (30s) | Popup shows "Timed out" error |
 
-**Principle: non-blocking, best-effort.** Tab grouping is an assistive feature. No error should disrupt normal browser usage.
+**Principle: non-blocking, best-effort.** Tab grouping is an assistive feature. No error should disrupt normal browser usage. Errors are shown in the popup with auto-dismiss.
 
-## Roadmap (not in scope for v1)
+## Grouping Application Logic
 
-- **Dry-run preview** — show grouping result in popup before applying, user confirms then executes.
-- **chrome.storage.sync** — sync user prompt across devices via Chrome account.
+When applying a `GroupResponse`:
+
+1. Build a name-to-groupId map from existing window groups (case-insensitive, whitespace-normalized).
+2. For each group in the response:
+   - Validate that all tabIds still exist and belong to the target window.
+   - If a matching group exists (by `groupId` or normalized name), move tabs into it.
+   - Otherwise, create a new group with a deterministic color.
+3. Tabs not mentioned in the response remain in their current state.

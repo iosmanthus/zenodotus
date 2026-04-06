@@ -12,7 +12,7 @@ const log = (...args: unknown[]) => console.log("[zenodotus]", ...args);
 const logError = (...args: unknown[]) => console.error("[zenodotus]", ...args);
 
 export function initBackground(adapter: ChromeAdapter) {
-  const DEBOUNCE_MS = 5000;
+  const DEBOUNCE_MS = 1000;
 
   async function collectTabInfo(tab: TabData): Promise<TabInfo | null> {
     if (tab.id == null || tab.windowId == null) return null;

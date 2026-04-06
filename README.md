@@ -49,7 +49,7 @@ Click the Zenodotus extension icon, then click **Organize Tabs** to group all ta
 
 ### Auto-group
 
-Toggle **Auto-group new tabs** to automatically regroup tabs when they are created, navigate to a new URL, or finish loading. Changes are batched with a 5s debounce to reduce agent calls.
+Toggle **Auto-group new tabs** to automatically regroup tabs when they are created, navigate to a new URL, or finish loading. Changes are batched with a 1s debounce to reduce agent calls.
 
 > **Note:** When auto-group is enabled, Zenodotus manages all tab groups in the window. Manually created groups may be reorganized or removed.
 

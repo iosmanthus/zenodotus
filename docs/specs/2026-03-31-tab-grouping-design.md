@@ -56,7 +56,7 @@ tab event → isAutoGroupEnabled? → markDirty(windowId) → debounce(5s) → f
 
 **Scheduler behavior:**
 
-- **Per-window debounce** — Each window has its own 5s debounce timer (`Map<number, timeout>`). Multiple rapid events on the same window collapse into one flush.
+- **Per-window debounce** — Each window has its own 1s debounce timer (`Map<number, timeout>`). Multiple rapid events on the same window collapse into one flush.
 - **Per-window concurrency** — A `Set<number>` tracks windows currently flushing. If a flush is in progress for a window, `markDirty` re-enqueues it for after the current flush completes.
 - **Threshold check** — `flushWindow` skips grouping if the window has fewer tabs than `minTabsToGroup`. Tabs below threshold are left as-is (no ungrouping).
 

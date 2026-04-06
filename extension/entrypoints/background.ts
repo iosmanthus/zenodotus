@@ -305,6 +305,10 @@ export default defineBackground(() => {
 
     if (msg.action === "setAutoGroup") {
       log("setAutoGroup:", msg.enabled);
+      if (!msg.enabled) {
+        for (const timer of debounceTimers.values()) clearTimeout(timer);
+        debounceTimers.clear();
+      }
       chrome.storage.local.set({ autoGroupEnabled: msg.enabled });
       sendResponse({ success: true });
       return false;

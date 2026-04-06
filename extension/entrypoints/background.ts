@@ -1,43 +1,23 @@
 import type { ExistingGroup, GroupResponse, TabInfo } from "@zenodotus/api-spec";
-import { requestGrouping } from "@/utils/api";
+import {
+  type ChromeAdapter,
+  createChromeAdapter,
+  TAB_GROUP_ID_NONE,
+  type TabData,
+} from "@/utils/chrome-adapter";
 import { colorForGroup } from "@/utils/color";
-
-type NonEmptyArray<T> = [T, ...T[]];
+import { createScheduler } from "@/utils/scheduler";
 
 const log = (...args: unknown[]) => console.log("[zenodotus]", ...args);
 const logError = (...args: unknown[]) => console.error("[zenodotus]", ...args);
 
-export default defineBackground(() => {
+export function initBackground(adapter: ChromeAdapter) {
   const DEBOUNCE_MS = 5000;
-  const flushingWindows = new Set<number>();
-  const debounceTimers = new Map<number, ReturnType<typeof setTimeout>>();
 
-  async function getMetaDescription(tabId: number): Promise<string> {
-    try {
-      const result = await Promise.race([
-        browser.scripting.executeScript({
-          target: { tabId },
-          func: () => {
-            const meta = document.querySelector('meta[name="description"]');
-            return meta ? meta.getAttribute("content") || "" : "";
-          },
-        }),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
-      ]);
-      if (!result) {
-        log("meta description timeout for tab", tabId);
-        return "";
-      }
-      return (result[0]?.result as string) || "";
-    } catch {
-      return "";
-    }
-  }
-
-  async function collectTabInfo(tab: chrome.tabs.Tab): Promise<TabInfo | null> {
+  async function collectTabInfo(tab: TabData): Promise<TabInfo | null> {
     if (tab.id == null || tab.windowId == null) return null;
 
-    const description = await getMetaDescription(tab.id);
+    const description = await adapter.getMetaDescription(tab.id);
     return {
       tabId: tab.id,
       windowId: tab.windowId,
@@ -48,23 +28,23 @@ export default defineBackground(() => {
   }
 
   async function getExistingGroups(windowId: number): Promise<ExistingGroup[]> {
-    const tabs = await chrome.tabs.query({ windowId });
+    const tabs = await adapter.queryTabs(windowId);
     const groupMap = new Map<number, number[]>();
 
     for (const tab of tabs) {
       if (tab.id == null) continue;
-      if (tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) {
+      if (tab.groupId !== TAB_GROUP_ID_NONE) {
         if (!groupMap.has(tab.groupId)) {
           groupMap.set(tab.groupId, []);
         }
-        groupMap.get(tab.groupId)!.push(tab.id);
+        groupMap.get(tab.groupId)?.push(tab.id);
       }
     }
 
     const groups: ExistingGroup[] = [];
     for (const [groupId, tabIds] of groupMap) {
       try {
-        const group = await chrome.tabGroups.get(groupId);
+        const group = await adapter.getTabGroup(groupId);
         groups.push({ groupId, name: group.title || "", tabIds });
       } catch {
         // group may have been removed
@@ -82,12 +62,12 @@ export default defineBackground(() => {
 
     const windowGroupIds = new Set<number>();
     const nameToGroup = new Map<string, { groupId: number; name: string }>();
-    const windowTabs = await chrome.tabs.query({ windowId });
+    const windowTabs = await adapter.queryTabs(windowId);
     for (const tab of windowTabs) {
-      if (tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) {
+      if (tab.groupId !== TAB_GROUP_ID_NONE) {
         windowGroupIds.add(tab.groupId);
         try {
-          const g = await chrome.tabGroups.get(tab.groupId);
+          const g = await adapter.getTabGroup(tab.groupId);
           const key = normalizeName(g.title || "");
           if (key && !nameToGroup.has(key)) {
             nameToGroup.set(key, { groupId: tab.groupId, name: g.title || "" });
@@ -101,10 +81,10 @@ export default defineBackground(() => {
     for (const group of result.groups) {
       if (!group.tabIds.length) continue;
 
-      const validTabIds = [];
+      const validTabIds: number[] = [];
       for (const tabId of group.tabIds) {
         try {
-          const tab = await chrome.tabs.get(tabId);
+          const tab = await adapter.getTab(tabId);
           if (tab.windowId === windowId) {
             validTabIds.push(tabId);
           }
@@ -112,12 +92,9 @@ export default defineBackground(() => {
           log("tab no longer exists:", tabId);
         }
       }
-      const [first, ...rest] = validTabIds;
-      if (first == null) continue;
-      const tabIds: NonEmptyArray<number> = [first, ...rest];
+      if (!validTabIds.length) continue;
 
       const match = group.name ? nameToGroup.get(normalizeName(group.name)) : undefined;
-      // Only use groupId if it belongs to this window
       const candidateGroupId = group.groupId ?? match?.groupId;
       let targetGroupId =
         candidateGroupId != null && windowGroupIds.has(candidateGroupId)
@@ -126,8 +103,14 @@ export default defineBackground(() => {
 
       if (targetGroupId != null) {
         try {
-          await chrome.tabs.group({ tabIds, groupId: targetGroupId });
-          log("moved", tabIds.length, "tabs into existing group", targetGroupId, match?.name || "");
+          await adapter.groupTabs(validTabIds, targetGroupId);
+          log(
+            "moved",
+            validTabIds.length,
+            "tabs into existing group",
+            targetGroupId,
+            match?.name || "",
+          );
         } catch (err) {
           logError("failed to move tabs into group", targetGroupId, err);
           targetGroupId = undefined;
@@ -136,13 +119,10 @@ export default defineBackground(() => {
 
       if (targetGroupId == null && group.name) {
         try {
-          const newGroupId = await chrome.tabs.group({ tabIds, createProperties: { windowId } });
-          await chrome.tabGroups.update(newGroupId, {
-            title: group.name,
-            color: colorForGroup(group.name),
-          });
+          const newGroupId = await adapter.createGroup(validTabIds, windowId);
+          await adapter.updateTabGroup(newGroupId, group.name, colorForGroup(group.name));
           nameToGroup.set(normalizeName(group.name), { groupId: newGroupId, name: group.name });
-          log("created group", JSON.stringify(group.name), "with", tabIds.length, "tabs");
+          log("created group", JSON.stringify(group.name), "with", validTabIds.length, "tabs");
         } catch (err) {
           logError("failed to create group", JSON.stringify(group.name), err);
         }
@@ -152,14 +132,9 @@ export default defineBackground(() => {
 
   async function organizeAllTabs(windowId: number): Promise<void> {
     log("organizeAllTabs start for window", windowId);
-    const windowTabs = await chrome.tabs.query({ windowId });
+    const windowTabs = await adapter.queryTabs(windowId);
     const existingGroups = await getExistingGroups(windowId);
-    const { prompt, model, debug, provider } = await chrome.storage.local.get({
-      prompt: "",
-      model: "",
-      debug: false,
-      provider: "",
-    });
+    const { prompt, model, debug, provider } = await adapter.getSettings();
     const tabInfoResults = await Promise.all(windowTabs.map(collectTabInfo));
     const tabInfos = tabInfoResults.filter((t): t is TabInfo => t !== null);
     log(
@@ -171,7 +146,7 @@ export default defineBackground(() => {
       windowId,
     );
 
-    const result = await requestGrouping({
+    const result = await adapter.requestGrouping({
       tabs: tabInfos,
       existingGroups,
       prompt,
@@ -185,117 +160,69 @@ export default defineBackground(() => {
     log("organizeAllTabs done");
   }
 
-  function markDirty(windowId: number): void {
-    const existing = debounceTimers.get(windowId);
-    if (existing != null) clearTimeout(existing);
-    debounceTimers.set(
-      windowId,
-      setTimeout(() => {
-        debounceTimers.delete(windowId);
-        void flushWindow(windowId).catch((err) =>
-          logError("auto-group flush failed for window", windowId, err),
-        );
-      }, DEBOUNCE_MS),
-    );
-  }
+  const scheduler = createScheduler(
+    {
+      queryTabs: (windowId) => adapter.queryTabs(windowId),
+      getMinTabsToGroup: () => adapter.getMinTabsToGroup(),
+      organizeWindow: organizeAllTabs,
+      onFlushError: (windowId, err) =>
+        logError("auto-group flush failed for window", windowId, err),
+    },
+    DEBOUNCE_MS,
+  );
 
-  async function flushWindow(windowId: number): Promise<void> {
-    if (flushingWindows.has(windowId)) {
-      markDirty(windowId);
+  async function handleOrganize(windowId: number) {
+    const allTabs = await adapter.queryTabs(windowId);
+    const minTabsToGroup = await adapter.getMinTabsToGroup();
+    if (minTabsToGroup > 0 && allTabs.length < minTabsToGroup) {
+      adapter.setOrganizeStatus(
+        "error",
+        `Need at least ${minTabsToGroup} tabs to group (currently ${allTabs.length})`,
+      );
       return;
     }
-
-    flushingWindows.add(windowId);
+    adapter.setOrganizeStatus("organizing");
+    const organizeTimeout = setTimeout(() => {
+      logError("organize timed out after 30s");
+      adapter.setOrganizeStatus("error", "Timed out");
+    }, 30000);
     try {
-      const allTabs = await chrome.tabs.query({ windowId });
-      const { minTabsToGroup } = await chrome.storage.local.get({ minTabsToGroup: 0 });
-      if (minTabsToGroup > 0 && allTabs.length < minTabsToGroup) {
-        log(
-          "auto-group: skipping window",
-          windowId,
-          "- has",
-          allTabs.length,
-          "tabs, below minimum",
-          minTabsToGroup,
-        );
-        return;
-      }
       await organizeAllTabs(windowId);
-    } finally {
-      flushingWindows.delete(windowId);
+      clearTimeout(organizeTimeout);
+      adapter.setOrganizeStatus("done");
+    } catch (err) {
+      clearTimeout(organizeTimeout);
+      logError("organize failed:", err);
+      adapter.setOrganizeStatus("error", err instanceof Error ? err.message : "Unknown error");
     }
   }
 
-  async function isAutoGroupEnabled(): Promise<boolean> {
-    const { autoGroupEnabled } = await chrome.storage.local.get({ autoGroupEnabled: false });
-    return autoGroupEnabled as boolean;
-  }
-
-  async function onTabUpdated(
-    ...[, changeInfo, tab]: Parameters<Parameters<typeof chrome.tabs.onUpdated.addListener>[0]>
-  ) {
+  adapter.addOnTabUpdatedListener(async (_tabId, changeInfo, tab) => {
     if (!changeInfo.url && changeInfo.status !== "complete") return;
-    if (!(await isAutoGroupEnabled())) return;
+    if (!(await adapter.isAutoGroupEnabled())) return;
     if (tab.windowId == null) return;
     log(
       "auto-group: tab updated",
       tab.id,
       changeInfo.url ? `url=${tab.url?.slice(0, 60)}` : `status=${changeInfo.status}`,
     );
-    markDirty(tab.windowId);
-  }
+    scheduler.markDirty(tab.windowId);
+  });
 
-  async function onTabCreated(
-    ...[tab]: Parameters<Parameters<typeof chrome.tabs.onCreated.addListener>[0]>
-  ) {
-    if (!(await isAutoGroupEnabled())) return;
+  adapter.addOnTabCreatedListener(async (tab) => {
+    if (!(await adapter.isAutoGroupEnabled())) return;
     if (tab.windowId == null) return;
     log("auto-group: tab created", tab.id);
-    markDirty(tab.windowId);
-  }
+    scheduler.markDirty(tab.windowId);
+  });
 
-  async function onTabAttached(
-    ...[, attachInfo]: Parameters<Parameters<typeof chrome.tabs.onAttached.addListener>[0]>
-  ) {
-    if (!(await isAutoGroupEnabled())) return;
+  adapter.addOnTabAttachedListener(async (_tabId, attachInfo) => {
+    if (!(await adapter.isAutoGroupEnabled())) return;
     log("auto-group: tab attached to window", attachInfo.newWindowId);
-    markDirty(attachInfo.newWindowId);
-  }
+    scheduler.markDirty(attachInfo.newWindowId);
+  });
 
-  async function handleOrganize(windowId: number) {
-    const allTabs = await chrome.tabs.query({ windowId });
-    const { minTabsToGroup } = await chrome.storage.local.get({ minTabsToGroup: 0 });
-    if (minTabsToGroup > 0 && allTabs.length < minTabsToGroup) {
-      chrome.storage.local.set({
-        organizeStatus: "error",
-        organizeError: `Need at least ${minTabsToGroup} tabs to group (currently ${allTabs.length})`,
-      });
-      return;
-    }
-    chrome.storage.local.set({ organizeStatus: "organizing" });
-    const organizeTimeout = setTimeout(() => {
-      logError("organize timed out after 30s");
-      chrome.storage.local.set({ organizeStatus: "error", organizeError: "Timed out" });
-    }, 30000);
-    try {
-      await organizeAllTabs(windowId);
-      clearTimeout(organizeTimeout);
-      chrome.storage.local.set({ organizeStatus: "done" });
-    } catch (err) {
-      clearTimeout(organizeTimeout);
-      logError("organize failed:", err);
-      chrome.storage.local.set({
-        organizeStatus: "error",
-        organizeError: err instanceof Error ? err.message : "Unknown error",
-      });
-    }
-  }
-
-  chrome.tabs.onUpdated.addListener(onTabUpdated);
-  chrome.tabs.onCreated.addListener(onTabCreated);
-  chrome.tabs.onAttached.addListener(onTabAttached);
-
-  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  adapter.addOnMessageListener((msg, _sender, sendResponse) => {
     if (msg.action === "organize") {
       log("organize triggered from popup");
       void handleOrganize(msg.windowId as number);
@@ -306,20 +233,23 @@ export default defineBackground(() => {
     if (msg.action === "setAutoGroup") {
       log("setAutoGroup:", msg.enabled);
       if (!msg.enabled) {
-        for (const timer of debounceTimers.values()) clearTimeout(timer);
-        debounceTimers.clear();
+        scheduler.cancelAll();
       }
-      chrome.storage.local.set({ autoGroupEnabled: msg.enabled });
+      adapter.setAutoGroupEnabled(msg.enabled as boolean);
       sendResponse({ success: true });
       return false;
     }
 
     if (msg.action === "getAutoGroup") {
       (async () => {
-        const data = await chrome.storage.local.get({ autoGroupEnabled: false });
-        sendResponse({ autoGroupEnabled: data.autoGroupEnabled as boolean });
+        const enabled = await adapter.isAutoGroupEnabled();
+        sendResponse({ autoGroupEnabled: enabled });
       })();
       return true;
     }
   });
+}
+
+export default defineBackground(() => {
+  initBackground(createChromeAdapter());
 });

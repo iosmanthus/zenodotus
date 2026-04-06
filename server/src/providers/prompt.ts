@@ -7,8 +7,9 @@ export const SYSTEM_PROMPT = [
   "Rules:",
   "1. Keep group names short (3 words max).",
   "2. When no existing groups are provided, freely create groups based on tab content.",
-  "3. Prefer assigning tabs to existing groups when relevant. Reuse exact existing group names — do not create spelling or casing variants.",
+  "3. Reuse existing group names when a tab fits — do not create spelling or casing variants.",
   "4. When a tab does not fit any existing group, create a new group for it. Only omit tabs that are completely unclassifiable (e.g. blank pages).",
+  "5. Existing groups show current tab-to-group assignments, but these may be stale. Decide each tab's group based solely on its current URL, title, and description. Move tabs to a different group if their content no longer fits.",
 ].join("\n");
 
 export function buildUserPrompt(request: GroupRequest): string {

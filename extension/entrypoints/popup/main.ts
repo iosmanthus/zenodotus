@@ -3,6 +3,7 @@ const autoToggle = document.getElementById("auto-toggle") as HTMLInputElement;
 const providerInput = document.getElementById("provider-input") as HTMLInputElement;
 const modelInput = document.getElementById("model-input") as HTMLInputElement;
 const thinkingToggle = document.getElementById("thinking-toggle") as HTMLInputElement;
+const minTabsInput = document.getElementById("min-tabs-input") as HTMLInputElement;
 const promptInput = document.getElementById("prompt-input") as HTMLTextAreaElement;
 const saveSettingsBtn = document.getElementById("save-settings-btn")!;
 const errorMsg = document.getElementById("error-msg")!;
@@ -68,6 +69,7 @@ chrome.storage.local
     model: "",
     thinking: false,
     provider: "",
+    minTabsToGroup: 0,
     organizeStatus: null,
   })
   .then((data) => {
@@ -75,6 +77,7 @@ chrome.storage.local
     modelInput.value = data.model;
     providerInput.value = data.provider;
     thinkingToggle.checked = data.thinking;
+    minTabsInput.value = data.minTabsToGroup > 0 ? String(data.minTabsToGroup) : "";
     if (data.organizeStatus === "organizing") {
       setOrganizing(true);
     }
@@ -86,5 +89,6 @@ saveSettingsBtn.addEventListener("click", () => {
     model: modelInput.value,
     thinking: thinkingToggle.checked,
     provider: providerInput.value,
+    minTabsToGroup: parseInt(minTabsInput.value, 10) || 0,
   });
 });

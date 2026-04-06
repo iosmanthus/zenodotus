@@ -8,12 +8,10 @@ const log = (...args: unknown[]) => console.log("[zenodotus]", ...args);
 const logError = (...args: unknown[]) => console.error("[zenodotus]", ...args);
 
 export default defineBackground(() => {
-  // Batching: debounce 2s + max wait 10s
-  const DEBOUNCE_MS = 2000;
-  const MAX_WAIT_MS = 10000;
-  const pendingTabs = new Set<chrome.tabs.Tab>();
+  const DEBOUNCE_MS = 5000;
+  const dirtyWindows = new Set<number>();
+  const flushingWindows = new Set<number>();
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-  let maxWaitTimer: ReturnType<typeof setTimeout> | null = null;
 
   async function getMetaDescription(tabId: number): Promise<string> {
     try {
@@ -184,103 +182,126 @@ export default defineBackground(() => {
     log("organizeAllTabs done");
   }
 
-  function flush(): void {
+  async function ungroupAll(windowId: number): Promise<void> {
+    const tabs = await chrome.tabs.query({ windowId });
+    const groupedTabIds = tabs
+      .filter((t) => t.id != null && t.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE)
+      .map((t) => t.id!);
+    const [first, ...rest] = groupedTabIds;
+    if (first == null) return;
+    log("ungrouping", groupedTabIds.length, "tabs in window", windowId);
+    chrome.tabs.ungroup([first, ...rest]);
+  }
+
+  function markDirty(windowId: number): void {
+    dirtyWindows.add(windowId);
     if (debounceTimer != null) clearTimeout(debounceTimer);
-    if (maxWaitTimer != null) clearTimeout(maxWaitTimer);
+    debounceTimer = setTimeout(flushAll, DEBOUNCE_MS);
+  }
+
+  function flushAll(): void {
     debounceTimer = null;
-    maxWaitTimer = null;
-    void flushPendingTabs().catch((err) => logError("auto-group flush failed:", err));
+    const windows = [...dirtyWindows];
+    dirtyWindows.clear();
+    for (const windowId of windows) {
+      void flushWindow(windowId).catch((err) =>
+        logError("auto-group flush failed for window", windowId, err),
+      );
+    }
   }
 
-  async function flushPendingTabs(): Promise<void> {
-    const tabs = Array.from(pendingTabs);
-    pendingTabs.clear();
-
-    if (tabs.length === 0) return;
-
-    // Group pending tabs by window
-    const tabsByWindow = new Map<number, chrome.tabs.Tab[]>();
-    for (const tab of tabs) {
-      if (tab.windowId == null) continue;
-      if (!tabsByWindow.has(tab.windowId)) {
-        tabsByWindow.set(tab.windowId, []);
-      }
-      tabsByWindow.get(tab.windowId)!.push(tab);
+  async function flushWindow(windowId: number): Promise<void> {
+    if (flushingWindows.has(windowId)) {
+      markDirty(windowId);
+      return;
     }
 
-    const { prompt, model, thinking, provider } = await chrome.storage.local.get({
-      prompt: "",
-      model: "",
-      thinking: false,
-      provider: "",
-    });
+    flushingWindows.add(windowId);
+    try {
+      const allTabs = await chrome.tabs.query({ windowId });
+      const { minTabsToGroup } = await chrome.storage.local.get({ minTabsToGroup: 0 });
+      if (minTabsToGroup > 0 && allTabs.length < minTabsToGroup) {
+        log("auto-group: window", windowId, "has", allTabs.length, "tabs, below minimum", minTabsToGroup);
+        await ungroupAll(windowId);
+        return;
+      }
+      await organizeAllTabs(windowId);
+    } finally {
+      flushingWindows.delete(windowId);
+    }
+  }
 
-    for (const [windowId, windowTabs] of tabsByWindow) {
-      log("auto-group: flushing", windowTabs.length, "pending tabs for window", windowId);
-      const existingGroups = await getExistingGroups(windowId);
-      const tabInfoResults = await Promise.all(windowTabs.map(collectTabInfo));
-      const tabInfos = tabInfoResults.filter((t): t is TabInfo => t !== null);
+  async function isAutoGroupEnabled(): Promise<boolean> {
+    const { autoGroupEnabled } = await chrome.storage.local.get({ autoGroupEnabled: false });
+    return autoGroupEnabled as boolean;
+  }
 
-      if (tabInfos.length === 0) continue;
+  async function onTabUpdated(...[, changeInfo, tab]: Parameters<Parameters<typeof chrome.tabs.onUpdated.addListener>[0]>) {
+    if (!changeInfo.url) return;
+    if (!(await isAutoGroupEnabled())) return;
+    if (tab.windowId == null) return;
+    log("auto-group: tab URL changed", tab.id, tab.url?.slice(0, 60));
+    markDirty(tab.windowId);
+  }
 
-      const result = await requestGrouping({
-        tabs: tabInfos,
-        existingGroups,
-        prompt,
-        model: model || undefined,
-        thinking: thinking || undefined,
-        provider: provider || undefined,
+  async function onTabCreated(...[tab]: Parameters<Parameters<typeof chrome.tabs.onCreated.addListener>[0]>) {
+    if (!(await isAutoGroupEnabled())) return;
+    if (tab.windowId == null) return;
+    log("auto-group: tab created", tab.id);
+    markDirty(tab.windowId);
+  }
+
+  async function onTabRemoved(...[, removeInfo]: Parameters<Parameters<typeof chrome.tabs.onRemoved.addListener>[0]>) {
+    if (removeInfo.isWindowClosing) return;
+    if (!(await isAutoGroupEnabled())) return;
+    log("auto-group: tab removed from window", removeInfo.windowId);
+    markDirty(removeInfo.windowId);
+  }
+
+  async function onTabAttached(...[, attachInfo]: Parameters<Parameters<typeof chrome.tabs.onAttached.addListener>[0]>) {
+    if (!(await isAutoGroupEnabled())) return;
+    log("auto-group: tab attached to window", attachInfo.newWindowId);
+    markDirty(attachInfo.newWindowId);
+  }
+
+  async function handleOrganize(windowId: number) {
+    const allTabs = await chrome.tabs.query({ windowId });
+    const { minTabsToGroup } = await chrome.storage.local.get({ minTabsToGroup: 0 });
+    if (minTabsToGroup > 0 && allTabs.length < minTabsToGroup) {
+      chrome.storage.local.set({
+        organizeStatus: "error",
+        organizeError: `Need at least ${minTabsToGroup} tabs to group (currently ${allTabs.length})`,
       });
-
-      if (result) {
-        log("auto-group: server returned", result.groups.length, "groups for window", windowId);
-        await applyGrouping(result, windowId);
-      } else {
-        logError("auto-group: server returned no result for window", windowId);
-      }
+      return;
+    }
+    chrome.storage.local.set({ organizeStatus: "organizing" });
+    const organizeTimeout = setTimeout(() => {
+      logError("organize timed out after 30s");
+      chrome.storage.local.set({ organizeStatus: "error", organizeError: "Timed out" });
+    }, 30000);
+    try {
+      await organizeAllTabs(windowId);
+      clearTimeout(organizeTimeout);
+      chrome.storage.local.set({ organizeStatus: "done" });
+    } catch (err) {
+      clearTimeout(organizeTimeout);
+      logError("organize failed:", err);
+      chrome.storage.local.set({
+        organizeStatus: "error",
+        organizeError: err instanceof Error ? err.message : "Unknown error",
+      });
     }
   }
 
-  chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
-    const { autoGroupEnabled } = await chrome.storage.local.get({
-      autoGroupEnabled: false,
-    });
-    if (!autoGroupEnabled) return;
-    if (changeInfo.status !== "complete") return;
-    if (tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) return;
-
-    log("auto-group: tab loaded", tab.id, tab.url?.slice(0, 60));
-    pendingTabs.add(tab);
-
-    if (debounceTimer != null) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(flush, DEBOUNCE_MS);
-
-    if (maxWaitTimer == null) {
-      maxWaitTimer = setTimeout(flush, MAX_WAIT_MS);
-    }
-  });
+  chrome.tabs.onUpdated.addListener(onTabUpdated);
+  chrome.tabs.onCreated.addListener(onTabCreated);
+  chrome.tabs.onRemoved.addListener(onTabRemoved);
+  chrome.tabs.onAttached.addListener(onTabAttached);
 
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (msg.action === "organize") {
       log("organize triggered from popup");
-      chrome.storage.local.set({ organizeStatus: "organizing" });
-      const organizeTimeout = setTimeout(() => {
-        logError("organize timed out after 30s");
-        chrome.storage.local.set({ organizeStatus: "error", organizeError: "Timed out" });
-      }, 30000);
-      organizeAllTabs(msg.windowId as number)
-        .then(() => {
-          clearTimeout(organizeTimeout);
-          chrome.storage.local.set({ organizeStatus: "done" });
-        })
-        .catch((err) => {
-          clearTimeout(organizeTimeout);
-          logError("organize failed:", err);
-          chrome.storage.local.set({
-            organizeStatus: "error",
-            organizeError: err instanceof Error ? err.message : "Unknown error",
-          });
-        });
+      void handleOrganize(msg.windowId as number);
       sendResponse({ success: true });
       return false;
     }

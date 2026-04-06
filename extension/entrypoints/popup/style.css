@@ -95,6 +95,16 @@ summary {
   font-size: 12px;
 }
 
+#min-tabs-input {
+  width: 100%;
+  margin-top: 4px;
+  padding: 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+}
+
 #prompt-input {
   width: 100%;
   margin-top: 4px;

@@ -20,7 +20,7 @@ function logToFile(label: string, data: unknown, enabled: boolean): void {
   }
 }
 
-export async function assignGroups(request: GroupRequest): Promise<GroupResponse | null> {
+export async function assignGroups(request: GroupRequest): Promise<GroupResponse> {
   const provider = request.provider as Provider | undefined;
   const selected = provider || DEFAULT_PROVIDER;
   const debug = request.debug ?? !!process.env.ZENODOTUS_DEBUG;
@@ -38,12 +38,11 @@ export async function assignGroups(request: GroupRequest): Promise<GroupResponse
   );
   logToFile("full_prompt", buildFullPrompt(request), debug);
 
-  let result: GroupResponse | null;
+  let result: GroupResponse;
   switch (selected) {
     case "codex":
       result = await codexAssign(request);
       break;
-    case "claude-code":
     default:
       result = await claudeAssign(request);
       break;

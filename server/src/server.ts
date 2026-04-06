@@ -75,12 +75,7 @@ async function main(): Promise<void> {
   try {
     const request = await readMessage();
     const result = await assignGroups(request);
-
-    if (result) {
-      writeMessage(result);
-    } else {
-      writeMessage({ error: "Failed to parse LLM response" });
-    }
+    writeMessage(result);
   } catch (err) {
     writeMessage({ error: err instanceof Error ? err.message : "Unknown error" });
   }

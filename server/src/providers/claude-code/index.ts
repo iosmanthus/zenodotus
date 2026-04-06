@@ -34,7 +34,7 @@ const outputSchema = {
   },
 };
 
-export async function assignGroups(request: GroupRequest): Promise<GroupResponse | null> {
+export async function assignGroups(request: GroupRequest): Promise<GroupResponse> {
   const fullPrompt = buildFullPrompt(request);
 
   const args = [
@@ -50,15 +50,12 @@ export async function assignGroups(request: GroupRequest): Promise<GroupResponse
 
   args.push("-p", fullPrompt);
 
-  try {
-    const { stdout } = await execFileAsync("claude", args, { timeout: 60000 });
-    const parsed = JSON.parse(stdout);
-    if (parsed.structured_output) {
-      return parsed.structured_output as GroupResponse;
-    }
-    return null;
-  } catch (err) {
-    console.error("[claude-code] error:", err);
-    return null;
+  const { stdout } = await execFileAsync("claude", args, { timeout: 60000 }).catch((err) => {
+    throw new Error(`claude-code CLI failed: ${err instanceof Error ? err.message : err}`);
+  });
+  const parsed = JSON.parse(stdout);
+  if (parsed.structured_output) {
+    return parsed.structured_output as GroupResponse;
   }
+  throw new Error("claude-code returned no structured output");
 }

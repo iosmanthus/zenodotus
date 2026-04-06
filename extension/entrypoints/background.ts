@@ -180,12 +180,8 @@ export default defineBackground(() => {
       provider: provider || undefined,
     });
 
-    if (result) {
-      log("server returned", result.groups.length, "groups");
-      await applyGrouping(result, windowId);
-    } else {
-      logError("server returned no result");
-    }
+    log("server returned", result.groups.length, "groups");
+    await applyGrouping(result, windowId);
     log("organizeAllTabs done");
   }
 

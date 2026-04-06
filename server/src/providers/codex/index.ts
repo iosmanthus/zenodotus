@@ -57,7 +57,7 @@ const outputSchema = {
   },
 };
 
-export async function assignGroups(request: GroupRequest): Promise<GroupResponse | null> {
+export async function assignGroups(request: GroupRequest): Promise<GroupResponse> {
   const fullPrompt = buildFullPrompt(request);
 
   const tmpDir = mkdtempSync(join(tmpdir(), "zenodotus-"));
@@ -75,10 +75,12 @@ export async function assignGroups(request: GroupRequest): Promise<GroupResponse
 
     args.push(fullPrompt);
 
-    await execFileAsync("codex", args, { timeout: 60000 });
+    await execFileAsync("codex", args, { timeout: 60000 }).catch((err) => {
+      throw new Error(`codex CLI failed: ${err instanceof Error ? err.message : err}`);
+    });
 
     const output = readFileSync(outputPath, "utf-8");
-    if (!output.trim()) return null;
+    if (!output.trim()) throw new Error("codex returned empty output");
     const parsed = JSON.parse(output) as GroupResponse;
     // OpenAI returns null for optional fields; strip so applyGrouping treats as absent
     for (const group of parsed.groups) {
@@ -86,9 +88,6 @@ export async function assignGroups(request: GroupRequest): Promise<GroupResponse
       if (group.name == null) delete group.name;
     }
     return parsed;
-  } catch (err) {
-    console.error("[codex] error:", err);
-    return null;
   } finally {
     rmSync(tmpDir, { recursive: true, force: true });
   }

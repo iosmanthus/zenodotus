@@ -52,7 +52,6 @@ tab event → isAutoGroupEnabled? → markDirty(windowId) → debounce(5s) → f
 |-------|-------------------|
 | `chrome.tabs.onUpdated` | URL changed or status became `complete` |
 | `chrome.tabs.onCreated` | New tab created |
-| `chrome.tabs.onRemoved` | Tab removed (unless window is closing) |
 | `chrome.tabs.onAttached` | Tab moved from another window |
 
 **Scheduler behavior:**

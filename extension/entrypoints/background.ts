@@ -254,15 +254,6 @@ export default defineBackground(() => {
     markDirty(tab.windowId);
   }
 
-  async function onTabRemoved(
-    ...[, removeInfo]: Parameters<Parameters<typeof chrome.tabs.onRemoved.addListener>[0]>
-  ) {
-    if (removeInfo.isWindowClosing) return;
-    if (!(await isAutoGroupEnabled())) return;
-    log("auto-group: tab removed from window", removeInfo.windowId);
-    markDirty(removeInfo.windowId);
-  }
-
   async function onTabAttached(
     ...[, attachInfo]: Parameters<Parameters<typeof chrome.tabs.onAttached.addListener>[0]>
   ) {
@@ -302,7 +293,6 @@ export default defineBackground(() => {
 
   chrome.tabs.onUpdated.addListener(onTabUpdated);
   chrome.tabs.onCreated.addListener(onTabCreated);
-  chrome.tabs.onRemoved.addListener(onTabRemoved);
   chrome.tabs.onAttached.addListener(onTabAttached);
 
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {

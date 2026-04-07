@@ -14,6 +14,62 @@ const logError = (...args: unknown[]) => console.error("[zenodotus]", ...args);
 export function initBackground(adapter: ChromeAdapter) {
   const DEBOUNCE_MS = 1000;
 
+  // Per-window cache: if URL set unchanged, reuse last LLM result locally
+  const groupingCache = new Map<number, { urlKey: string; urlToGroup: Map<string, string> }>();
+
+  function normalizeUrl(url: string): string {
+    try {
+      const parsed = new URL(url);
+      const parts = parsed.pathname.split("/").filter(Boolean).slice(0, 2);
+      return parsed.origin + (parts.length ? "/" + parts.join("/") : "");
+    } catch {
+      return url;
+    }
+  }
+
+  function buildUrlKey(urls: string[]): string {
+    return [...new Set(urls.map(normalizeUrl))].sort().join("\n");
+  }
+
+  function buildCachedResponse(tabInfos: TabInfo[], cache: Map<string, string>): GroupResponse {
+    const groupMap = new Map<string, number[]>();
+    for (const tab of tabInfos) {
+      const groupName = cache.get(normalizeUrl(tab.url));
+      if (groupName) {
+        if (!groupMap.has(groupName)) groupMap.set(groupName, []);
+        groupMap.get(groupName)?.push(tab.tabId);
+      }
+    }
+    return {
+      groups: Array.from(groupMap, ([name, tabIds]) => ({ name, tabIds })),
+    };
+  }
+
+  function updateCache(
+    windowId: number,
+    urlKey: string,
+    result: GroupResponse,
+    tabInfos: TabInfo[],
+    existingGroups: ExistingGroup[],
+  ) {
+    const tabIdToUrl = new Map<number, string>();
+    for (const tab of tabInfos) tabIdToUrl.set(tab.tabId, normalizeUrl(tab.url));
+
+    const groupIdToName = new Map<number, string>();
+    for (const eg of existingGroups) groupIdToName.set(eg.groupId, eg.name);
+
+    const urlToGroup = new Map<string, string>();
+    for (const group of result.groups) {
+      const name = group.name || (group.groupId != null ? groupIdToName.get(group.groupId) : undefined);
+      if (!name) continue;
+      for (const tabId of group.tabIds) {
+        const url = tabIdToUrl.get(tabId);
+        if (url) urlToGroup.set(url, name);
+      }
+    }
+    groupingCache.set(windowId, { urlKey, urlToGroup });
+  }
+
   async function collectTabInfo(tab: TabData): Promise<TabInfo | null> {
     if (tab.id == null || tab.windowId == null) return null;
 
@@ -133,10 +189,22 @@ export function initBackground(adapter: ChromeAdapter) {
   async function organizeAllTabs(windowId: number): Promise<void> {
     log("organizeAllTabs start for window", windowId);
     const windowTabs = await adapter.queryTabs(windowId);
-    const existingGroups = await getExistingGroups(windowId);
-    const { prompt, model, debug, provider } = await adapter.getSettings();
     const tabInfoResults = await Promise.all(windowTabs.map(collectTabInfo));
     const tabInfos = tabInfoResults.filter((t): t is TabInfo => t !== null);
+
+    const urlKey = buildUrlKey(tabInfos.map((t) => t.url));
+    const cached = groupingCache.get(windowId);
+
+    if (cached && cached.urlKey === urlKey) {
+      log("cache hit for window", windowId, "- skipping LLM call");
+      const result = buildCachedResponse(tabInfos, cached.urlToGroup);
+      await applyGrouping(result, windowId);
+      log("organizeAllTabs done (cached)");
+      return;
+    }
+
+    const existingGroups = await getExistingGroups(windowId);
+    const { prompt, model, debug, provider } = await adapter.getSettings();
     log(
       "sending",
       tabInfos.length,
@@ -156,6 +224,7 @@ export function initBackground(adapter: ChromeAdapter) {
     });
 
     log("server returned", result.groups.length, "groups");
+    updateCache(windowId, urlKey, result, tabInfos, existingGroups);
     await applyGrouping(result, windowId);
     log("organizeAllTabs done");
   }
@@ -212,6 +281,7 @@ export function initBackground(adapter: ChromeAdapter) {
   adapter.addOnTabCreatedListener(async (tab) => {
     if (!(await adapter.isAutoGroupEnabled())) return;
     if (tab.windowId == null) return;
+    if (tab.groupId !== TAB_GROUP_ID_NONE) return;
     log("auto-group: tab created", tab.id);
     scheduler.markDirty(tab.windowId);
   });
